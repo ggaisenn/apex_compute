@@ -16,7 +16,7 @@ The design separates machine-level arithmetic from planning, public interfaces, 
 flowchart TB
     USER["Developer or evaluator"]
 
-    subgraph INTELLIGENCE["Layer 7 · Optional companion"]
+    subgraph INTELLIGENCE["Layer 7 · Companion"]
         REQUEST["Natural-language request"] --> MODEL["Gemma 4 via Gemini API"]
         MODEL --> PLAN["Structured plan"] --> GATE["Operation allow-list<br/>and parameter validation"]
         GATE --> APPROVAL["User reviews and approves"]
