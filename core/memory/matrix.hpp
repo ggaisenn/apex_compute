@@ -1,6 +1,7 @@
 #pragma once
 
 #include "aligned_buffer.hpp"
+#include "../status.hpp"
 
 #include <cstddef>
 #include <cstring>
@@ -9,15 +10,7 @@
 
 namespace apex::gemm {
 
-enum class MatrixStatus {
-    success,
-    invalid_argument,
-    invalid_leading_dimension,
-    buffer_too_small,
-    size_overflow,
-    allocation_failure,
-    empty_matrix,
-};
+using MatrixStatus = Status;
 
 enum class MatrixStorageOrder {
     row_major,
@@ -151,7 +144,7 @@ public:
             AlignedAllocator::allocate_matrix<float>(
                 rows, columns, &buffer, &leading_dimension);
         if (allocation_status != AllocationStatus::success) {
-            return to_matrix_status(allocation_status);
+            return allocation_status;
         }
 
         if (buffer.size_bytes() != 0) {
@@ -198,21 +191,6 @@ public:
     }
 
 private:
-    [[nodiscard]] static MatrixStatus to_matrix_status(
-        AllocationStatus status) noexcept {
-        switch (status) {
-            case AllocationStatus::success:
-                return MatrixStatus::success;
-            case AllocationStatus::invalid_argument:
-                return MatrixStatus::invalid_argument;
-            case AllocationStatus::size_overflow:
-                return MatrixStatus::size_overflow;
-            case AllocationStatus::allocation_failure:
-                return MatrixStatus::allocation_failure;
-        }
-        return MatrixStatus::invalid_argument;
-    }
-
     AlignedBuffer buffer_;
     std::size_t rows_ = 0;
     std::size_t columns_ = 0;

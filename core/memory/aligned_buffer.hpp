@@ -1,5 +1,7 @@
 #pragma once
 
+#include "../status.hpp"
+
 #include <cstddef>
 #include <cstdlib>
 #include <limits>
@@ -16,12 +18,7 @@ namespace apex::gemm {
 
 inline constexpr std::size_t kCacheLineAlignment = 64;
 
-enum class AllocationStatus {
-    success,
-    invalid_argument,
-    size_overflow,
-    allocation_failure,
-};
+using AllocationStatus = Status;
 
 class AlignedBuffer {
 public:
