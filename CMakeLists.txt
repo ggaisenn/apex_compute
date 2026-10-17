@@ -41,6 +41,7 @@ endif()
 add_executable(apex-validate
     apex-validate/validate_engine.cpp
     core/orchestration/gemm_engine.cpp
+    kernels/neon/gemm_neon_kernel.cpp
     kernels/packing.cpp)
 target_include_directories(apex-validate PRIVATE ${CMAKE_CURRENT_SOURCE_DIR})
 
