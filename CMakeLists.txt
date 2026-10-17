@@ -43,3 +43,6 @@ add_executable(apex-validate
     core/orchestration/gemm_engine.cpp
     kernels/packing.cpp)
 target_include_directories(apex-validate PRIVATE ${CMAKE_CURRENT_SOURCE_DIR})
+
+add_library(apex-bench-engine STATIC apex-bench/bench_engine.cpp)
+target_include_directories(apex-bench-engine PUBLIC ${CMAKE_CURRENT_SOURCE_DIR})
