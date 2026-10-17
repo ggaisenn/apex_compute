@@ -30,7 +30,7 @@ def build_parser() -> argparse.ArgumentParser:
         prog="apex-companion",
         description="Turn a bounded natural-language request into approved APEX shell operations.",
         epilog="Examples: --offline 'benchmark a small square multiply' --yes; "
-        "'validate edge cases' (requires GEMINI_API_KEY)",
+        "'validate edge cases' (requires project operator Gemini configuration)",
     )
     parser.add_argument("request", nargs="*", help="Benchmark, validation, or environment request")
     parser.add_argument("--offline", action="store_true", help="Use recorded interpretations; no API key or network")
