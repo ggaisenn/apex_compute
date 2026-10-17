@@ -48,6 +48,15 @@ namespace detail {
         return validation_status;
     }
 
+    if (alpha == 0.0F) {
+        for (std::size_t row = 0; row < c.rows(); ++row) {
+            for (std::size_t column = 0; column < c.columns(); ++column) {
+                c(row, column) = beta == 0.0F ? 0.0F : beta * c(row, column);
+            }
+        }
+        return Status::Success;
+    }
+
     for (std::size_t row = 0; row < c.rows(); ++row) {
         for (std::size_t column = 0; column < c.columns(); ++column) {
             float sum = 0.0F;

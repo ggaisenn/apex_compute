@@ -37,3 +37,6 @@ endif()
 
 # The core will use only the C++ standard library; keep third-party runtime
 # dependencies out of the project targets.
+
+add_executable(apex-validate apex-validate/validate_engine.cpp)
+target_include_directories(apex-validate PRIVATE ${CMAKE_CURRENT_SOURCE_DIR})
