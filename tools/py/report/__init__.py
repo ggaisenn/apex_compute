@@ -18,8 +18,9 @@ def _number(value: Any, default: float = 0.0) -> float:
 
 
 def _bar_chart(title: str, axis_label: str, points: list[tuple[str, float]]) -> str:
-    width, height = 900, 420
-    left, top, chart_w, chart_h = 70, 30, 790, 300
+    width = max(900, 120 + len(points) * 48)
+    height = 520
+    left, top, chart_w, chart_h = 70, 30, width - 120, 300
     maximum = max((value for _, value in points), default=1.0) or 1.0
     bars = []
     slot = chart_w / max(1, len(points))
@@ -35,9 +36,11 @@ def _bar_chart(title: str, axis_label: str, points: list[tuple[str, float]]) -> 
     labels = []
     for index, (label, _) in enumerate(points):
         x = left + index * slot + slot / 2
+        y = top + chart_h + 92
         labels.append(
-            f'<text x="{x:.1f}" y="{top + chart_h + 22}" text-anchor="middle" '
-            f'font-size="10">{html.escape(label[:20])}</text>'
+            f'<text x="{x:.1f}" y="{y}" text-anchor="end" '
+            f'transform="rotate(-55 {x:.1f} {y})" font-size="9">'
+            f'{html.escape(label[:24])}</text>'
         )
     return "\n".join([
         f'<svg xmlns="http://www.w3.org/2000/svg" width="{width}" height="{height}" '
@@ -79,7 +82,7 @@ def generate_report(
         f"- Operating system: `{env.get('os', 'unknown')}`",
         "",
         "## Results", "",
-        "| M × N × K | Variant | Threads | Latency (ms) | GFLOPS | Speedup |",
+        "| M × N × K | Variant | Threads requested / used | Latency (ms) | GFLOPS | Speedup |",
         "|---:|:---|---:|---:|---:|---:|",
     ]
     points: list[tuple[str, float]] = []
@@ -90,12 +93,17 @@ def generate_report(
         m, n, k = shape.get("m", 0), shape.get("n", 0), shape.get("k", 0)
         latency = _number(result.get("median_ns"))
         gflops = _number(result.get("gflops"))
+        threads_requested = int(_number(
+            result.get("threads_requested", result.get("threads", 1)), 1.0
+        ))
+        threads_used = int(_number(result.get("threads", 1), 1.0))
         lines.append(
-            f"| {m} × {n} × {k} | {variant} | {result.get('threads', 1)} "
+            f"| {m} × {n} × {k} | {variant} | {threads_requested} / {threads_used} "
             f"| {latency / 1_000_000:.4f} | {gflops:.3f} | {_number(result.get('speedup'), 1.0):.3f}× |"
         )
-        points.append((f"{m}x{n}x{k} {variant}", gflops))
-        speedups.append((f"{m}x{n}x{k} {variant}", _number(result.get("speedup"), 1.0)))
+        chart_label = f"N{m} {variant} t{threads_requested}/{threads_used}"
+        points.append((chart_label, gflops))
+        speedups.append((chart_label, _number(result.get("speedup"), 1.0)))
     lines.extend(["", "Generated from the recorded runner JSON output.", ""])
     markdown_path.write_text("\n".join(lines), encoding="utf-8")
 

@@ -35,6 +35,7 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("request", nargs="*", help="Benchmark, validation, or environment request")
     parser.add_argument("--offline", action="store_true", help="Use recorded interpretations; no API key or network")
     parser.add_argument("--replay-results", action="store_true", help="Use fixture result logs without local binaries")
+    parser.add_argument("--explain", action="store_true", help="Explain the final result in plain language")
     parser.add_argument("--yes", action="store_true", help="Run the displayed approved plan without prompting")
     parser.add_argument("--timeout", type=float, default=180.0, help="Maximum child/model request time in seconds")
     parser.add_argument("--model", help="Gemini model name (defaults to APEX_GEMINI_MODEL)")
@@ -108,6 +109,14 @@ def main(argv: Sequence[str] | None = None) -> int:
             client = GeminiClient(model=args.model, endpoint=args.endpoint, timeout=args.timeout)
             prompt = interpretation_prompt(request)
             raw_plan = parse_plan(client.generate(prompt))
+        if args.explain and isinstance(raw_plan, dict):
+            operations = raw_plan.get("operations")
+            if (isinstance(operations, list) and operations
+                    and isinstance(operations[-1], dict)
+                    and operations[-1].get("op") in {"benchmark", "validate", "environment"}):
+                if len(operations) >= 3:
+                    raise PlanError("--explain needs one available operation slot")
+                operations.append({"op": "explain_last", "focus": "overall"})
         plan = validate_plan(raw_plan)
     except GeminiError as exc:
         print(redact(str(exc), os.environ.get("GEMINI_API_KEY")), file=sys.stderr)
