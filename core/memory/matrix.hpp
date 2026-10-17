@@ -28,7 +28,7 @@ namespace detail {
         return MatrixStatus::invalid_leading_dimension;
     }
     if (rows != 0 && columns != 0 && data == nullptr) {
-        return MatrixStatus::invalid_argument;
+        return MatrixStatus::NullData;
     }
 
     std::size_t required_elements = 0;

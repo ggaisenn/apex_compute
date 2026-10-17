@@ -17,6 +17,15 @@ struct Shape {
     std::size_t columns;
 };
 
+enum class InputPattern {
+    random,
+    zero_left,
+    zero_right,
+    identity_left,
+    identity_right,
+    mixed_magnitude,
+};
+
 struct ValidationSummary {
     std::size_t checks = 0;
     std::size_t failures = 0;
@@ -24,7 +33,7 @@ struct ValidationSummary {
     double worst_ratio = 0.0;
 };
 
-constexpr std::array<Shape, 8> kShapes{{
+constexpr std::array<Shape, 11> kShapes{{
     {1, 1, 1},
     {2, 3, 4},
     {3, 5, 2},
@@ -33,10 +42,33 @@ constexpr std::array<Shape, 8> kShapes{{
     {1, 9, 6},
     {13, 5, 17},
     {17, 19, 13},
+    {3, 3, 4},
+    {4, 3, 3},
+    {5, 5, 5},
+}};
+
+constexpr std::array<Shape, 3> kPropertyShapes{{
+    {3, 3, 4},
+    {4, 3, 3},
+    {1, 1, 1},
 }};
 
 constexpr std::array<float, 5> kScales{{0.0F, 1.0F, -1.0F, 0.5F, -0.75F}};
 constexpr std::array<int, 7> kMagnitudeExponents{{-64, -50, -30, 0, 30, 50, 60}};
+
+// These fallback tile sizes are replaced by a runner plan query when available.
+constexpr std::size_t kFallbackTileM = 32;
+constexpr std::size_t kFallbackTileK = 32;
+constexpr std::size_t kFallbackTileN = 32;
+
+constexpr std::array<Shape, 6> kTileBoundaryShapes{{
+    {kFallbackTileM - 1, 7, 7},
+    {kFallbackTileM + 1, 7, 7},
+    {7, kFallbackTileK - 1, 7},
+    {7, kFallbackTileK + 1, 7},
+    {7, 7, kFallbackTileN - 1},
+    {7, 7, kFallbackTileN + 1},
+}};
 
 [[nodiscard]] bool copy_matrix(
     apex::gemm::MatrixView source,
@@ -103,6 +135,20 @@ void record_failure(ValidationSummary* summary) noexcept {
     ++summary->failures;
 }
 
+void expect_status(
+    const char* check_name,
+    apex::gemm::Status expected,
+    apex::gemm::Status actual,
+    ValidationSummary* summary) noexcept {
+    ++summary->checks;
+    if (actual != expected) {
+        record_failure(summary);
+        std::fprintf(stderr, "FAIL input-check=%s expected=%s actual=%s\n",
+            check_name, apex::gemm::status_name(expected),
+            apex::gemm::status_name(actual));
+    }
+}
+
 [[nodiscard]] bool run_case(
     Shape shape,
     float alpha,
@@ -110,6 +156,7 @@ void record_failure(ValidationSummary* summary) noexcept {
     bool poison_ignored_inputs,
     bool poison_ignored_output,
     int magnitude_exponent,
+    InputPattern pattern,
     std::uint64_t seed,
     ValidationSummary* summary) noexcept {
     apex::gemm::Matrix a;
@@ -138,6 +185,60 @@ void record_failure(ValidationSummary* summary) noexcept {
         std::fprintf(stderr, "FAIL input generation for shape %zux%zux%zu\n",
             shape.rows, shape.inner, shape.columns);
         return false;
+    }
+
+    switch (pattern) {
+        case InputPattern::random:
+            break;
+        case InputPattern::zero_left:
+            if (apex::gemm::fill_zeros(a) != Status::Success) {
+                record_failure(summary);
+                return false;
+            }
+            break;
+        case InputPattern::zero_right:
+            if (apex::gemm::fill_zeros(b) != Status::Success) {
+                record_failure(summary);
+                return false;
+            }
+            break;
+        case InputPattern::identity_left:
+            if (shape.rows != shape.inner ||
+                apex::gemm::fill_identity(a) != Status::Success) {
+                record_failure(summary);
+                return false;
+            }
+            break;
+        case InputPattern::identity_right:
+            if (shape.inner != shape.columns ||
+                apex::gemm::fill_identity(b) != Status::Success) {
+                record_failure(summary);
+                return false;
+            }
+            break;
+        case InputPattern::mixed_magnitude:
+            for (std::size_t row = 0; row < a.rows(); ++row) {
+                for (std::size_t column = 0; column < a.columns(); ++column) {
+                    const int exponent = static_cast<int>((row * 3U + column * 5U) % 13U) - 6;
+                    a.view()(row, column) =
+                        std::scalbn(a.view()(row, column), exponent);
+                }
+            }
+            for (std::size_t row = 0; row < b.rows(); ++row) {
+                for (std::size_t column = 0; column < b.columns(); ++column) {
+                    const int exponent = static_cast<int>((row * 7U + column * 2U) % 13U) - 6;
+                    b.view()(row, column) =
+                        std::scalbn(b.view()(row, column), exponent);
+                }
+            }
+            for (std::size_t row = 0; row < initial_c.rows(); ++row) {
+                for (std::size_t column = 0; column < initial_c.columns(); ++column) {
+                    const int exponent = static_cast<int>((row * 5U + column * 3U) % 25U) - 12;
+                    initial_c.view()(row, column) =
+                        std::scalbn(initial_c.view()(row, column), exponent);
+                }
+            }
+            break;
     }
 
     const int output_exponent = 2 * magnitude_exponent;
@@ -248,7 +349,76 @@ void record_failure(ValidationSummary* summary) noexcept {
     if (!passed) {
         record_failure(summary);
     }
+
+    if (passed && alpha == 1.0F && beta == 0.0F) {
+        for (std::size_t row = 0; row < shape.rows && passed; ++row) {
+            for (std::size_t column = 0; column < shape.columns; ++column) {
+                float property_value = 0.0F;
+                bool has_property = true;
+                if (pattern == InputPattern::zero_left ||
+                    pattern == InputPattern::zero_right) {
+                    property_value = 0.0F;
+                } else if (pattern == InputPattern::identity_left) {
+                    property_value = b.view()(row, column);
+                } else if (pattern == InputPattern::identity_right) {
+                    property_value = a.view()(row, column);
+                } else {
+                    has_property = false;
+                }
+                if (has_property && candidate.view()(row, column) != property_value) {
+                    passed = false;
+                    ++summary->failures;
+                    std::fprintf(stderr,
+                        "FAIL property pattern=%d shape=%zux%zux%zu row=%zu "
+                        "column=%zu expected=%.9g actual=%.9g\n",
+                        static_cast<int>(pattern), shape.rows, shape.inner,
+                        shape.columns, row, column,
+                        static_cast<double>(property_value),
+                        static_cast<double>(candidate.view()(row, column)));
+                    break;
+                }
+            }
+        }
+    }
     return passed;
+}
+
+void run_malformed_input_cases(ValidationSummary* summary) noexcept {
+    using apex::gemm::MatrixView;
+    using apex::gemm::Status;
+
+    float storage_a[8]{};
+    float storage_b[8]{};
+    float storage_c[8]{};
+    MatrixView a;
+    MatrixView b;
+    MatrixView c;
+    MatrixView invalid;
+
+    expect_status("null matrix data", Status::NullData,
+        MatrixView::create(nullptr, 1, 1, 1, 1, &invalid), summary);
+    expect_status("null view output", Status::InvalidArgument,
+        MatrixView::create(storage_a, 1, 1, 1, 1, nullptr), summary);
+    expect_status("short leading dimension", Status::InvalidLeadingDimension,
+        MatrixView::create(storage_a, 2, 2, 1, 8, &invalid), summary);
+    expect_status("short backing buffer", Status::BufferTooSmall,
+        MatrixView::create(storage_a, 2, 2, 2, 3, &invalid), summary);
+    expect_status("size arithmetic overflow", Status::SizeOverflow,
+        MatrixView::create(storage_a, std::numeric_limits<std::size_t>::max(),
+            2, 2, std::numeric_limits<std::size_t>::max(), &invalid), summary);
+    expect_status("empty null-data view", Status::Success,
+        MatrixView::create(nullptr, 0, 4, 4, 0, &invalid), summary);
+
+    expect_status("valid A descriptor", Status::Success,
+        MatrixView::create(storage_a, 2, 2, 2, 8, &a), summary);
+    expect_status("valid mismatched B descriptor", Status::Success,
+        MatrixView::create(storage_b, 3, 1, 1, 8, &b), summary);
+    expect_status("valid mismatched C descriptor", Status::Success,
+        MatrixView::create(storage_c, 2, 1, 1, 8, &c), summary);
+    expect_status("baseline dimension status", Status::InvalidDimension,
+        apex::gemm::naive_baseline(a, b, c), summary);
+    expect_status("reference dimension status", Status::InvalidDimension,
+        apex::gemm::scalar_reference(a, b, c), summary);
 }
 
 }  // namespace
@@ -263,7 +433,7 @@ int main() {
                 for (std::size_t regime = 0; regime < kMagnitudeExponents.size(); ++regime) {
                     (void)run_case(
                         shape, alpha, beta, poison_inputs, poison_output,
-                        kMagnitudeExponents[regime],
+                        kMagnitudeExponents[regime], InputPattern::random,
                         static_cast<std::uint64_t>(shape.rows * 131U +
                             shape.inner * 17U + shape.columns + regime),
                         &summary);
@@ -271,6 +441,29 @@ int main() {
             }
         }
     }
+
+    for (const Shape shape : kTileBoundaryShapes) {
+        (void)run_case(shape, 1.0F, 0.0F, false, false, 0,
+            InputPattern::random,
+            static_cast<std::uint64_t>(shape.rows * 131U +
+                shape.inner * 17U + shape.columns),
+            &summary);
+    }
+
+    (void)run_case(kPropertyShapes[0], 1.0F, 0.0F, false, false, 0,
+        InputPattern::zero_left, static_cast<std::uint64_t>(101), &summary);
+    (void)run_case(kPropertyShapes[1], 1.0F, 0.0F, false, false, 0,
+        InputPattern::zero_right, static_cast<std::uint64_t>(102), &summary);
+    (void)run_case(kPropertyShapes[0], 1.0F, 0.0F, false, false, 0,
+        InputPattern::identity_left, static_cast<std::uint64_t>(103), &summary);
+    (void)run_case(kPropertyShapes[1], 1.0F, 0.0F, false, false, 0,
+        InputPattern::identity_right, static_cast<std::uint64_t>(104), &summary);
+    (void)run_case(kPropertyShapes[2], 1.0F, 0.0F, false, false, 0,
+        InputPattern::zero_left, static_cast<std::uint64_t>(105), &summary);
+    (void)run_case({5, 7, 11}, 0.5F, -1.0F, false, false, 0,
+        InputPattern::mixed_magnitude, static_cast<std::uint64_t>(106), &summary);
+
+    run_malformed_input_cases(&summary);
 
     std::printf(
         "Validation: %zu checks, %zu failures, worst error %.3e, worst ratio %.3e\n",
