@@ -3,22 +3,15 @@
 #include "../memory/aligned_buffer.hpp"
 #include "../memory/matrix.hpp"
 #include "../../kernels/packing.hpp"
+#include "../../kernels/kernel_contract.hpp"
+#include "../../kernels/scalar/gemm_scalar_kernel.hpp"
 #include "tiling_planner.hpp"
 
 #include <cstddef>
 
 namespace apex::gemm {
 
-using MicroKernelFunction = Status (*)(
-    std::size_t k,
-    const float* packed_a,
-    const float* packed_b,
-    float* c,
-    std::size_t ldc,
-    std::size_t mr,
-    std::size_t nr,
-    float alpha,
-    float beta) noexcept;
+using MicroKernelFunction = KernelFunction;
 
 class GemmWorkspace {
 public:
@@ -53,17 +46,5 @@ public:
         float alpha = 1.0F,
         float beta = 0.0F) noexcept;
 };
-
-// Portable packed-panel kernel used when no specialized kernel is supplied.
-[[nodiscard]] Status scalar_packed_microkernel(
-    std::size_t k,
-    const float* packed_a,
-    const float* packed_b,
-    float* c,
-    std::size_t ldc,
-    std::size_t mr,
-    std::size_t nr,
-    float alpha,
-    float beta) noexcept;
 
 }  // namespace apex::gemm

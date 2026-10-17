@@ -8,6 +8,15 @@ set(CMAKE_CXX_EXTENSIONS OFF)
 
 option(APEX_FORCE_SCALAR "Build only the portable scalar kernel" OFF)
 option(APEX_ENABLE_SANITIZERS "Enable supported address and undefined behavior sanitizers" OFF)
+set(APEX_KERNEL_OVERRIDE "AUTO" CACHE STRING "Compile-time kernel selection (AUTO, SCALAR, NEON, AVX512)")
+set_property(CACHE APEX_KERNEL_OVERRIDE PROPERTY STRINGS AUTO SCALAR NEON AVX512)
+string(TOUPPER "${APEX_KERNEL_OVERRIDE}" APEX_KERNEL_OVERRIDE_NORMALIZED)
+if(NOT APEX_KERNEL_OVERRIDE_NORMALIZED MATCHES "^(AUTO|SCALAR|NEON|AVX512)$")
+    message(FATAL_ERROR "APEX_KERNEL_OVERRIDE must be AUTO, SCALAR, NEON, or AVX512")
+endif()
+if(NOT APEX_KERNEL_OVERRIDE_NORMALIZED STREQUAL "AUTO")
+    add_compile_definitions(APEX_KERNEL_OVERRIDE_${APEX_KERNEL_OVERRIDE_NORMALIZED}=1)
+endif()
 
 if(MSVC)
     add_compile_options(/W4 /WX)
@@ -42,8 +51,10 @@ add_executable(apex-validate
     apex-validate/validate_engine.cpp
     kernels/avx512/gemm_avx512_kernel.cpp
     core/orchestration/gemm_engine.cpp
+    core/gemm/kernel_dispatcher.cpp
     kernels/neon/gemm_neon_kernel.cpp
-    kernels/packing.cpp)
+    kernels/packing.cpp
+    kernels/scalar/gemm_scalar_kernel.cpp)
 target_include_directories(apex-validate PRIVATE ${CMAKE_CURRENT_SOURCE_DIR})
 
 if(NOT APEX_FORCE_SCALAR AND

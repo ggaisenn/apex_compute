@@ -1,6 +1,6 @@
 #include "gemm_neon_kernel.hpp"
 
-#if defined(__aarch64__) || defined(_M_ARM64)
+#if (defined(__aarch64__) || defined(_M_ARM64)) && !defined(APEX_FORCE_SCALAR)
 #include <arm_neon.h>
 #endif
 
@@ -26,7 +26,7 @@ namespace {
     return Status::Success;
 }
 
-#if defined(__aarch64__) || defined(_M_ARM64)
+#if (defined(__aarch64__) || defined(_M_ARM64)) && !defined(APEX_FORCE_SCALAR)
 [[nodiscard]] float32x4_t apply_scale(
     float32x4_t accumulator,
     float* output,
@@ -158,7 +158,7 @@ Status gemm_neon_4x4_kernel(
     if (validation != Status::Success) {
         return validation;
     }
-#if defined(__aarch64__) || defined(_M_ARM64)
+#if (defined(__aarch64__) || defined(_M_ARM64)) && !defined(APEX_FORCE_SCALAR)
     return run_4x4(k, packed_a, packed_b, c, ldc, alpha, beta);
 #else
     (void)alpha;
@@ -182,7 +182,7 @@ Status gemm_neon_8x8_kernel(
     if (validation != Status::Success) {
         return validation;
     }
-#if defined(__aarch64__) || defined(_M_ARM64)
+#if (defined(__aarch64__) || defined(_M_ARM64)) && !defined(APEX_FORCE_SCALAR)
     return run_8x8(k, packed_a, packed_b, c, ldc, alpha, beta);
 #else
     (void)alpha;
