@@ -49,16 +49,28 @@ endif()
 # The core will use only the C++ standard library; keep third-party runtime
 # dependencies out of the project targets.
 
-add_executable(apex-validate
-    apex-validate/validate_engine.cpp
+set(APEX_COMPUTE_SOURCES
     kernels/avx512/gemm_avx512_kernel.cpp
     core/orchestration/gemm_engine.cpp
     core/gemm/kernel_dispatcher.cpp
     kernels/neon/gemm_neon_kernel.cpp
     kernels/packing.cpp
     kernels/scalar/gemm_scalar_kernel.cpp)
+
+add_executable(apex-validate
+    apex-validate/validate_engine.cpp
+    ${APEX_COMPUTE_SOURCES})
 target_include_directories(apex-validate PRIVATE ${CMAKE_CURRENT_SOURCE_DIR})
 target_link_libraries(apex-validate PRIVATE Threads::Threads)
+
+add_executable(apex-runner
+    tools/runner/main.cpp
+    ${APEX_COMPUTE_SOURCES})
+target_include_directories(apex-runner PRIVATE ${CMAKE_CURRENT_SOURCE_DIR})
+target_link_libraries(apex-runner PRIVATE Threads::Threads)
+file(GENERATE
+    OUTPUT "${CMAKE_BINARY_DIR}/runner-location.json"
+    CONTENT "{\"runner\":\"$<TARGET_FILE:apex-runner>\",\"configuration\":\"$<CONFIG>\"}\n")
 
 if(NOT APEX_FORCE_SCALAR AND
    CMAKE_SYSTEM_PROCESSOR MATCHES "^(x86_64|AMD64|amd64|i[3-6]86)$")
