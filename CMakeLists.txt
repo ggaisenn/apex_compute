@@ -2,6 +2,8 @@ cmake_minimum_required(VERSION 3.21)
 
 project(apex_compute LANGUAGES CXX)
 
+find_package(Threads REQUIRED)
+
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
@@ -56,6 +58,7 @@ add_executable(apex-validate
     kernels/packing.cpp
     kernels/scalar/gemm_scalar_kernel.cpp)
 target_include_directories(apex-validate PRIVATE ${CMAKE_CURRENT_SOURCE_DIR})
+target_link_libraries(apex-validate PRIVATE Threads::Threads)
 
 if(NOT APEX_FORCE_SCALAR AND
    CMAKE_SYSTEM_PROCESSOR MATCHES "^(x86_64|AMD64|amd64|i[3-6]86)$")
