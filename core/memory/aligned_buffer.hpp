@@ -174,7 +174,7 @@ public:
 
         if (rows == 0 || columns == 0) {
             output->reset();
-            *output_stride = 0;
+            *output_stride = columns;
             return AllocationStatus::success;
         }
 
