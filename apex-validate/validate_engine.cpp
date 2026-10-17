@@ -26,6 +26,18 @@ enum class InputPattern {
     mixed_magnitude,
 };
 
+using GemmKernel = apex::gemm::Status (*)(
+    apex::gemm::MatrixView,
+    apex::gemm::MatrixView,
+    apex::gemm::MatrixView,
+    float,
+    float) noexcept;
+
+struct KernelEntry {
+    const char* name;
+    GemmKernel execute;
+};
+
 struct ValidationSummary {
     std::size_t checks = 0;
     std::size_t failures = 0;
@@ -55,6 +67,9 @@ constexpr std::array<Shape, 3> kPropertyShapes{{
 
 constexpr std::array<float, 5> kScales{{0.0F, 1.0F, -1.0F, 0.5F, -0.75F}};
 constexpr std::array<int, 7> kMagnitudeExponents{{-64, -50, -30, 0, 30, 50, 60}};
+
+constexpr KernelEntry kScalarKernel{"scalar-baseline", apex::gemm::naive_baseline};
+constexpr std::array<KernelEntry, 0> kVectorKernels{};
 
 // These fallback tile sizes are replaced by a runner plan query when available.
 constexpr std::size_t kFallbackTileM = 32;
@@ -158,10 +173,12 @@ void expect_status(
     int magnitude_exponent,
     InputPattern pattern,
     std::uint64_t seed,
-    ValidationSummary* summary) noexcept {
+    ValidationSummary* summary,
+    const KernelEntry& kernel = kScalarKernel) noexcept {
     apex::gemm::Matrix a;
     apex::gemm::Matrix b;
     apex::gemm::Matrix initial_c;
+    apex::gemm::Matrix scalar_result;
     apex::gemm::Matrix candidate;
     apex::gemm::Matrix reference;
 
@@ -170,6 +187,7 @@ void expect_status(
     if (Matrix::create(shape.rows, shape.inner, &a) != Status::Success ||
         Matrix::create(shape.inner, shape.columns, &b) != Status::Success ||
         Matrix::create(shape.rows, shape.columns, &initial_c) != Status::Success ||
+        Matrix::create(shape.rows, shape.columns, &scalar_result) != Status::Success ||
         Matrix::create(shape.rows, shape.columns, &candidate) != Status::Success ||
         Matrix::create(shape.rows, shape.columns, &reference) != Status::Success) {
         record_failure(summary);
@@ -275,7 +293,8 @@ void expect_status(
         }
     }
 
-    if (!copy_matrix(initial_c.view(), candidate.view()) ||
+    if (!copy_matrix(initial_c.view(), scalar_result.view()) ||
+        !copy_matrix(initial_c.view(), candidate.view()) ||
         !copy_matrix(initial_c.view(), reference.view())) {
         record_failure(summary);
         std::fprintf(stderr, "FAIL output initialization for shape %zux%zux%zu\n",
@@ -287,6 +306,7 @@ void expect_status(
         const float nan = std::numeric_limits<float>::quiet_NaN();
         for (std::size_t row = 0; row < candidate.rows(); ++row) {
             for (std::size_t column = 0; column < candidate.columns(); ++column) {
+                scalar_result.view()(row, column) = nan;
                 candidate.view()(row, column) = nan;
                 reference.view()(row, column) = nan;
             }
@@ -295,16 +315,22 @@ void expect_status(
 
     const Status reference_status = apex::gemm::scalar_reference(
         a.view(), b.view(), reference.view(), alpha, beta);
-    const Status candidate_status = apex::gemm::naive_baseline(
+    const Status scalar_status = apex::gemm::naive_baseline(
+        a.view(), b.view(), scalar_result.view(), alpha, beta);
+    const Status candidate_status = kernel.execute(
         a.view(), b.view(), candidate.view(), alpha, beta);
     ++summary->checks;
 
-    if (reference_status != Status::Success || candidate_status != Status::Success) {
+    if (reference_status != Status::Success || scalar_status != Status::Success ||
+        candidate_status != Status::Success) {
         record_failure(summary);
         std::fprintf(stderr,
-            "FAIL status shape=%zux%zux%zu alpha=%g beta=%g reference=%s candidate=%s\n",
+            "FAIL kernel=%s shape=%zux%zux%zu alpha=%g beta=%g "
+            "reference=%s scalar=%s candidate=%s\n",
+            kernel.name,
             shape.rows, shape.inner, shape.columns, static_cast<double>(alpha),
             static_cast<double>(beta), apex::gemm::status_name(reference_status),
+            apex::gemm::status_name(scalar_status),
             apex::gemm::status_name(candidate_status));
         return false;
     }
@@ -315,6 +341,8 @@ void expect_status(
             const double expected = static_cast<double>(reference.view()(row, column));
             const double actual = static_cast<double>(candidate.view()(row, column));
             const double error = std::abs(actual - expected);
+            const double scalar_error = std::abs(
+                actual - static_cast<double>(scalar_result.view()(row, column)));
             const double scale = element_scale(
                 a.view(), b.view(), initial_c.view(), row, column, alpha,
                 poison_ignored_output ? 0.0F : beta);
@@ -329,15 +357,17 @@ void expect_status(
             }
 
             if (!std::isfinite(expected) || !std::isfinite(actual) ||
-                !std::isfinite(tolerance) || error > tolerance) {
+                !std::isfinite(tolerance) || error > tolerance ||
+                scalar_error > tolerance) {
                 passed = false;
                 std::fprintf(stderr,
-                    "FAIL element shape=%zux%zux%zu row=%zu column=%zu "
+                    "FAIL kernel=%s shape=%zux%zux%zu row=%zu column=%zu "
                     "exp2=%d alpha=%g beta=%g expected=%.9g actual=%.9g "
-                    "error=%.3e tol=%.3e\n",
-                    shape.rows, shape.inner, shape.columns, row, column,
+                    "error=%.3e scalar-error=%.3e tol=%.3e\n",
+                    kernel.name, shape.rows, shape.inner, shape.columns, row, column,
                     magnitude_exponent, static_cast<double>(alpha),
-                    static_cast<double>(beta), expected, actual, error, tolerance);
+                    static_cast<double>(beta), expected, actual, error, scalar_error,
+                    tolerance);
                 break;
             }
         }
@@ -421,6 +451,67 @@ void run_malformed_input_cases(ValidationSummary* summary) noexcept {
         apex::gemm::scalar_reference(a, b, c), summary);
 }
 
+[[nodiscard]] apex::gemm::Status injected_corruption_kernel(
+    apex::gemm::MatrixView a,
+    apex::gemm::MatrixView b,
+    apex::gemm::MatrixView c,
+    float alpha,
+    float beta) noexcept {
+    const apex::gemm::Status status =
+        apex::gemm::naive_baseline(a, b, c, alpha, beta);
+    if (status == apex::gemm::Status::Success && c.rows() != 0 &&
+        c.columns() != 0) {
+        c(0, 0) += 1.0F;
+    }
+    return status;
+}
+
+void run_fault_sensitivity_case(ValidationSummary* summary) noexcept {
+    apex::gemm::Matrix a;
+    apex::gemm::Matrix b;
+    apex::gemm::Matrix candidate;
+    apex::gemm::Matrix reference;
+    using apex::gemm::Matrix;
+    using apex::gemm::Status;
+    if (Matrix::create(1, 1, &a) != Status::Success ||
+        Matrix::create(1, 1, &b) != Status::Success ||
+        Matrix::create(1, 1, &candidate) != Status::Success ||
+        Matrix::create(1, 1, &reference) != Status::Success) {
+        record_failure(summary);
+        std::fprintf(stderr, "FAIL fault-sensitivity allocation\n");
+        return;
+    }
+
+    a.view()(0, 0) = 2.0F;
+    b.view()(0, 0) = 3.0F;
+    candidate.view()(0, 0) = 0.0F;
+    reference.view()(0, 0) = 0.0F;
+
+    const Status expected_status = apex::gemm::scalar_reference(
+        a.view(), b.view(), reference.view(), 1.0F, 0.0F);
+    const Status injected_status = injected_corruption_kernel(
+        a.view(), b.view(), candidate.view(), 1.0F, 0.0F);
+    const double error = std::abs(
+        static_cast<double>(candidate.view()(0, 0)) -
+        static_cast<double>(reference.view()(0, 0)));
+    const double tolerance = element_tolerance(
+        1, std::abs(static_cast<double>(a.view()(0, 0)) *
+            static_cast<double>(b.view()(0, 0))));
+    ++summary->checks;
+
+    if (expected_status != Status::Success || injected_status != Status::Success ||
+        error <= tolerance) {
+        record_failure(summary);
+        std::fprintf(stderr,
+            "FAIL fault-sensitivity expected-status=%s injected-status=%s "
+            "error=%.3e tol=%.3e\n",
+            apex::gemm::status_name(expected_status),
+            apex::gemm::status_name(injected_status), error, tolerance);
+    } else {
+        std::printf("PASS fault-sensitivity detected injected output corruption\n");
+    }
+}
+
 }  // namespace
 
 int main() {
@@ -450,6 +541,25 @@ int main() {
             &summary);
     }
 
+    if (kVectorKernels.empty()) {
+        std::printf("SKIP vector-kernel cross-check: no vectorized kernel is registered\n");
+    }
+    for (const KernelEntry& kernel : kVectorKernels) {
+        for (const Shape shape : kShapes) {
+            for (const float alpha : kScales) {
+                for (const float beta : kScales) {
+                    for (const int exponent : kMagnitudeExponents) {
+                        (void)run_case(shape, alpha, beta, alpha == 0.0F,
+                            beta == 0.0F, exponent, InputPattern::random,
+                            static_cast<std::uint64_t>(shape.rows * 131U +
+                                shape.inner * 17U + shape.columns),
+                            &summary, kernel);
+                    }
+                }
+            }
+        }
+    }
+
     (void)run_case(kPropertyShapes[0], 1.0F, 0.0F, false, false, 0,
         InputPattern::zero_left, static_cast<std::uint64_t>(101), &summary);
     (void)run_case(kPropertyShapes[1], 1.0F, 0.0F, false, false, 0,
@@ -464,6 +574,7 @@ int main() {
         InputPattern::mixed_magnitude, static_cast<std::uint64_t>(106), &summary);
 
     run_malformed_input_cases(&summary);
+    run_fault_sensitivity_case(&summary);
 
     std::printf(
         "Validation: %zu checks, %zu failures, worst error %.3e, worst ratio %.3e\n",
