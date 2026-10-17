@@ -1,0 +1,135 @@
+name: CI
+
+on:
+  push:
+  pull_request:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build-and-validate:
+    name: Build and validate (${{ matrix.name }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - name: Linux GCC
+            os: ubuntu-latest
+            cc: gcc
+            cxx: g++
+          - name: Linux Clang
+            os: ubuntu-latest
+            cc: clang
+            cxx: clang++
+          - name: Windows MSVC
+            os: windows-latest
+            cc: cl
+            cxx: cl
+          - name: macOS Clang
+            os: macos-14
+            cc: clang
+            cxx: clang++
+    env:
+      CC: ${{ matrix.cc }}
+      CXX: ${{ matrix.cxx }}
+    steps:
+      - name: Check out source
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.x"
+
+      - name: Initialize MSVC environment
+        if: runner.os == 'Windows'
+        uses: ilammy/msvc-dev-cmd@v1
+
+      - name: Configure debug preset
+        run: cmake --preset debug
+
+      - name: Build with warnings treated as errors
+        run: cmake --build --preset debug --parallel
+
+      - name: Run automated validation gate
+        run: python tools/apex-validate.py --profile ci --format both --json-out build/debug/validation.json
+
+      - name: Upload validation results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: validation-${{ matrix.name }}
+          path: build/debug/validation.json
+          if-no-files-found: ignore
+
+  sanitizer:
+    name: Address and undefined behavior sanitizers (${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-14, windows-latest]
+    steps:
+      - name: Check out source
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.x"
+
+      - name: Initialize MSVC environment
+        if: runner.os == 'Windows'
+        uses: ilammy/msvc-dev-cmd@v1
+
+      - name: Configure sanitizer preset
+        run: cmake --preset asan
+
+      - name: Build sanitizer targets
+        run: cmake --build --preset asan --parallel
+
+      - name: Run validation under sanitizers
+        run: python tools/apex-validate.py --profile smoke --format both --json-out build/asan/validation.json
+
+      - name: Upload sanitizer validation results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: sanitizer-validation-${{ matrix.os }}
+          path: build/asan/validation.json
+          if-no-files-found: ignore
+
+  portable-scalar:
+    name: Portable scalar build
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out source
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.x"
+
+      - name: Configure portable preset
+        run: cmake --preset portable
+
+      - name: Build scalar-only configuration
+        run: cmake --build --preset portable --parallel
+
+      - name: Validate scalar fallback
+        run: python tools/apex-validate.py --profile ci --kernels scalar --format both --json-out build/portable/validation.json
+
+      - name: Upload portable validation results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: validation-portable-scalar
+          path: build/portable/validation.json
+          if-no-files-found: ignore
