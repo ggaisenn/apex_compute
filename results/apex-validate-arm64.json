@@ -1,0 +1,460 @@
+{
+  "schema": {
+    "name": "apex.validate.result",
+    "version": 1
+  },
+  "environment": {
+    "schema": {
+      "name": "apex.runner.info",
+      "version": 1
+    },
+    "contract": {
+      "major": 1,
+      "minor": 0
+    },
+    "runner": "apex-runner",
+    "library_version": "0.1.0",
+    "architecture": "arm64",
+    "os": "macos",
+    "features": {
+      "neon": true,
+      "avx2": false,
+      "avx512f": false,
+      "fma": false
+    },
+    "cache_bytes": {
+      "l1d": 65536,
+      "l2": 4194304,
+      "l3": 8388608,
+      "line": 128
+    },
+    "kernel": "neon-4x4",
+    "variants": [
+      "engine",
+      "naive",
+      "reference"
+    ]
+  },
+  "checks": [
+    {
+      "shape": {
+        "m": 1,
+        "n": 1,
+        "k": 1
+      },
+      "kernel": "scalar",
+      "threads": 1,
+      "threads_requested": 1,
+      "status": "Ok",
+      "reference_status": "Ok",
+      "checksum_error": 0.0,
+      "tolerance": 1.4471352100372313e-08,
+      "passed": true,
+      "skipped": false
+    },
+    {
+      "shape": {
+        "m": 1,
+        "n": 1,
+        "k": 1
+      },
+      "kernel": "neon",
+      "threads": 1,
+      "threads_requested": 1,
+      "status": "Ok",
+      "reference_status": "Ok",
+      "checksum_error": 0.0,
+      "tolerance": 1.4471352100372313e-08,
+      "passed": true,
+      "skipped": false
+    },
+    {
+      "shape": {
+        "m": 15,
+        "n": 15,
+        "k": 15
+      },
+      "kernel": "scalar",
+      "threads": 1,
+      "threads_requested": 1,
+      "status": "Ok",
+      "reference_status": "Ok",
+      "checksum_error": 2.38419e-07,
+      "tolerance": 2.2032040357589722e-05,
+      "passed": true,
+      "skipped": false
+    },
+    {
+      "shape": {
+        "m": 15,
+        "n": 15,
+        "k": 15
+      },
+      "kernel": "neon",
+      "threads": 1,
+      "threads_requested": 1,
+      "status": "Ok",
+      "reference_status": "Ok",
+      "checksum_error": 2.38419e-07,
+      "tolerance": 2.2032040357589722e-05,
+      "passed": true,
+      "skipped": false
+    },
+    {
+      "shape": {
+        "m": 16,
+        "n": 16,
+        "k": 16
+      },
+      "kernel": "scalar",
+      "threads": 1,
+      "threads_requested": 1,
+      "status": "Ok",
+      "reference_status": "Ok",
+      "checksum_error": 4.76837e-07,
+      "tolerance": 2.3712992668151853e-05,
+      "passed": true,
+      "skipped": false
+    },
+    {
+      "shape": {
+        "m": 16,
+        "n": 16,
+        "k": 16
+      },
+      "kernel": "neon",
+      "threads": 1,
+      "threads_requested": 1,
+      "status": "Ok",
+      "reference_status": "Ok",
+      "checksum_error": 4.76837e-07,
+      "tolerance": 2.3712992668151853e-05,
+      "passed": true,
+      "skipped": false
+    },
+    {
+      "shape": {
+        "m": 17,
+        "n": 17,
+        "k": 17
+      },
+      "kernel": "scalar",
+      "threads": 1,
+      "threads_requested": 1,
+      "status": "Ok",
+      "reference_status": "Ok",
+      "checksum_error": 4.76837e-07,
+      "tolerance": 2.8244417905807496e-05,
+      "passed": true,
+      "skipped": false
+    },
+    {
+      "shape": {
+        "m": 17,
+        "n": 17,
+        "k": 17
+      },
+      "kernel": "neon",
+      "threads": 1,
+      "threads_requested": 1,
+      "status": "Ok",
+      "reference_status": "Ok",
+      "checksum_error": 4.76837e-07,
+      "tolerance": 2.8244417905807496e-05,
+      "passed": true,
+      "skipped": false
+    },
+    {
+      "shape": {
+        "m": 31,
+        "n": 31,
+        "k": 31
+      },
+      "kernel": "scalar",
+      "threads": 1,
+      "threads_requested": 1,
+      "status": "Ok",
+      "reference_status": "Ok",
+      "checksum_error": 9.53674e-07,
+      "tolerance": 8.800941705703736e-05,
+      "passed": true,
+      "skipped": false
+    },
+    {
+      "shape": {
+        "m": 31,
+        "n": 31,
+        "k": 31
+      },
+      "kernel": "neon",
+      "threads": 1,
+      "threads_requested": 1,
+      "status": "Ok",
+      "reference_status": "Ok",
+      "checksum_error": 9.53674e-07,
+      "tolerance": 8.800941705703736e-05,
+      "passed": true,
+      "skipped": false
+    },
+    {
+      "shape": {
+        "m": 32,
+        "n": 32,
+        "k": 32
+      },
+      "kernel": "scalar",
+      "threads": 1,
+      "threads_requested": 1,
+      "status": "Ok",
+      "reference_status": "Ok",
+      "checksum_error": 1.43051e-06,
+      "tolerance": 9.272933006286621e-05,
+      "passed": true,
+      "skipped": false
+    },
+    {
+      "shape": {
+        "m": 32,
+        "n": 32,
+        "k": 32
+      },
+      "kernel": "neon",
+      "threads": 1,
+      "threads_requested": 1,
+      "status": "Ok",
+      "reference_status": "Ok",
+      "checksum_error": 1.43051e-06,
+      "tolerance": 9.272933006286621e-05,
+      "passed": true,
+      "skipped": false
+    },
+    {
+      "shape": {
+        "m": 33,
+        "n": 33,
+        "k": 33
+      },
+      "kernel": "scalar",
+      "threads": 1,
+      "threads_requested": 1,
+      "status": "Ok",
+      "reference_status": "Ok",
+      "checksum_error": 1.19209e-06,
+      "tolerance": 9.928436279296874e-05,
+      "passed": true,
+      "skipped": false
+    },
+    {
+      "shape": {
+        "m": 33,
+        "n": 33,
+        "k": 33
+      },
+      "kernel": "neon",
+      "threads": 1,
+      "threads_requested": 1,
+      "status": "Ok",
+      "reference_status": "Ok",
+      "checksum_error": 1.19209e-06,
+      "tolerance": 9.928436279296874e-05,
+      "passed": true,
+      "skipped": false
+    },
+    {
+      "shape": {
+        "m": 63,
+        "n": 63,
+        "k": 63
+      },
+      "kernel": "scalar",
+      "threads": 1,
+      "threads_requested": 1,
+      "status": "Ok",
+      "reference_status": "Ok",
+      "checksum_error": 2.38419e-06,
+      "tolerance": 0.00035063220262527466,
+      "passed": true,
+      "skipped": false
+    },
+    {
+      "shape": {
+        "m": 63,
+        "n": 63,
+        "k": 63
+      },
+      "kernel": "neon",
+      "threads": 1,
+      "threads_requested": 1,
+      "status": "Ok",
+      "reference_status": "Ok",
+      "checksum_error": 2.38419e-06,
+      "tolerance": 0.00035063220262527466,
+      "passed": true,
+      "skipped": false
+    },
+    {
+      "shape": {
+        "m": 64,
+        "n": 64,
+        "k": 64
+      },
+      "kernel": "scalar",
+      "threads": 1,
+      "threads_requested": 1,
+      "status": "Ok",
+      "reference_status": "Ok",
+      "checksum_error": 2.86102e-06,
+      "tolerance": 0.00033984602689743045,
+      "passed": true,
+      "skipped": false
+    },
+    {
+      "shape": {
+        "m": 64,
+        "n": 64,
+        "k": 64
+      },
+      "kernel": "neon",
+      "threads": 1,
+      "threads_requested": 1,
+      "status": "Ok",
+      "reference_status": "Ok",
+      "checksum_error": 2.86102e-06,
+      "tolerance": 0.00033984602689743045,
+      "passed": true,
+      "skipped": false
+    },
+    {
+      "shape": {
+        "m": 65,
+        "n": 65,
+        "k": 65
+      },
+      "kernel": "scalar",
+      "threads": 1,
+      "threads_requested": 1,
+      "status": "Ok",
+      "reference_status": "Ok",
+      "checksum_error": 2.38419e-06,
+      "tolerance": 0.0003622243285179138,
+      "passed": true,
+      "skipped": false
+    },
+    {
+      "shape": {
+        "m": 65,
+        "n": 65,
+        "k": 65
+      },
+      "kernel": "neon",
+      "threads": 1,
+      "threads_requested": 1,
+      "status": "Ok",
+      "reference_status": "Ok",
+      "checksum_error": 2.38419e-06,
+      "tolerance": 0.0003622243285179138,
+      "passed": true,
+      "skipped": false
+    },
+    {
+      "shape": {
+        "m": 127,
+        "n": 127,
+        "k": 127
+      },
+      "kernel": "scalar",
+      "threads": 1,
+      "threads_requested": 1,
+      "status": "Ok",
+      "reference_status": "Ok",
+      "checksum_error": 6.67572e-06,
+      "tolerance": 0.0013200625777244567,
+      "passed": true,
+      "skipped": false
+    },
+    {
+      "shape": {
+        "m": 127,
+        "n": 127,
+        "k": 127
+      },
+      "kernel": "neon",
+      "threads": 1,
+      "threads_requested": 1,
+      "status": "Ok",
+      "reference_status": "Ok",
+      "checksum_error": 6.67572e-06,
+      "tolerance": 0.0013200625777244567,
+      "passed": true,
+      "skipped": false
+    },
+    {
+      "shape": {
+        "m": 128,
+        "n": 128,
+        "k": 128
+      },
+      "kernel": "scalar",
+      "threads": 1,
+      "threads_requested": 1,
+      "status": "Ok",
+      "reference_status": "Ok",
+      "checksum_error": 5.72205e-06,
+      "tolerance": 0.0013013312697410582,
+      "passed": true,
+      "skipped": false
+    },
+    {
+      "shape": {
+        "m": 128,
+        "n": 128,
+        "k": 128
+      },
+      "kernel": "neon",
+      "threads": 1,
+      "threads_requested": 1,
+      "status": "Ok",
+      "reference_status": "Ok",
+      "checksum_error": 5.72205e-06,
+      "tolerance": 0.0013013312697410582,
+      "passed": true,
+      "skipped": false
+    },
+    {
+      "shape": {
+        "m": 129,
+        "n": 129,
+        "k": 129
+      },
+      "kernel": "scalar",
+      "threads": 1,
+      "threads_requested": 1,
+      "status": "Ok",
+      "reference_status": "Ok",
+      "checksum_error": 6.67572e-06,
+      "tolerance": 0.0013914759635925292,
+      "passed": true,
+      "skipped": false
+    },
+    {
+      "shape": {
+        "m": 129,
+        "n": 129,
+        "k": 129
+      },
+      "kernel": "neon",
+      "threads": 1,
+      "threads_requested": 1,
+      "status": "Ok",
+      "reference_status": "Ok",
+      "checksum_error": 6.67572e-06,
+      "tolerance": 0.0013914759635925292,
+      "passed": true,
+      "skipped": false
+    }
+  ],
+  "summary": {
+    "checks": 26,
+    "failures": 0
+  }
+}

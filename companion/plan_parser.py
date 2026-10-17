@@ -5,6 +5,8 @@ from __future__ import annotations
 import json
 from typing import Any
 
+from .ops import PlanError, validate_plan
+
 
 class PlanParseError(ValueError):
     """Model output did not contain exactly one valid object."""
@@ -14,47 +16,30 @@ def parse_plan(text: str) -> dict[str, Any]:
     if not isinstance(text, str) or not text.strip():
         raise PlanParseError("model response was empty")
     decoder = json.JSONDecoder()
-    objects: list[Any] = []
     index = 0
-    in_string = False
-    escaped = False
-    depth = 0
-    start = -1
     while index < len(text):
-        char = text[index]
-        if in_string:
-            if escaped:
-                escaped = False
-            elif char == "\\":
-                escaped = True
-            elif char == '"':
-                in_string = False
-            index += 1
+        start = text.find("{", index)
+        if start < 0:
+            break
+        try:
+            value, end = decoder.raw_decode(text, start)
+        except json.JSONDecodeError:
+            index = start + 1
             continue
-        if char == '"' and depth > 0:
-            in_string = True
-        elif char == "{":
-            if depth == 0:
-                start = index
-            depth += 1
-        elif char == "}" and depth > 0:
-            depth -= 1
-            if depth == 0:
-                candidate = text[start:index + 1]
-                try:
-                    value, consumed = decoder.raw_decode(candidate)
-                except json.JSONDecodeError as exc:
-                    raise PlanParseError(f"invalid plan JSON: {exc.msg}") from exc
-                if consumed != len(candidate):
-                    raise PlanParseError("plan JSON has trailing content")
-                objects.append(value)
-                if len(objects) > 1:
-                    raise PlanParseError("response contains more than one JSON object")
-        index += 1
-    if depth != 0:
-        raise PlanParseError("plan JSON object is truncated")
-    if len(objects) != 1:
-        raise PlanParseError("response must contain exactly one JSON object")
-    if not isinstance(objects[0], dict):
-        raise PlanParseError("plan root must be a JSON object")
-    return objects[0]
+
+        if isinstance(value, dict) and "operations" in value:
+            try:
+                validate_plan(value)
+            except PlanError:
+                # Ignore schema descriptions and other JSON that cannot be
+                # safely translated into an allow-listed operation plan.
+                index = start + 1
+                continue
+            # Gemma can emit a draft and then repeat or revise it. Use the
+            # first complete, valid plan; the CLI displays it for approval.
+            return value
+
+        # Keep looking inside unrelated JSON wrappers for the plan object.
+        index = start + 1
+
+    raise PlanParseError("response must contain a valid JSON operation plan")

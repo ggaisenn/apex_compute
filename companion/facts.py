@@ -56,8 +56,8 @@ def extract_facts(document: Any) -> dict[str, Any]:
                 "",
             ])
         lines.extend([
-            "| Shape | Variant | Threads | Latency (ms) | GFLOPS | Speedup |",
-            "|---|---|---:|---:|---:|---:|",
+            "| Shape | Variant | Kernel | Threads | Latency (ms) | GFLOPS | Speedup |",
+            "|---|---|---|---:|---:|---:|---:|",
         ])
         results = document.get("results")
         if results is None:
@@ -80,6 +80,7 @@ def extract_facts(document: Any) -> dict[str, Any]:
                 latency_ms, gflops, speedup = 0.0, 0.0, 1.0
             lines.append(
                 f"| {shape_text} | {_cell(record.get('variant', 'unknown'))} "
+                f"| {_cell(record.get('kernel', record.get('variant', 'unknown')))} "
                 f"| {_cell(record.get('threads', 1))} | {latency_ms:.4f} "
                 f"| {gflops:.4f} | {speedup:.3f}× |"
             )

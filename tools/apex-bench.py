@@ -97,6 +97,9 @@ def main(argv: Sequence[str] | None = None) -> int:
     try:
         client = RunnerClient(args.runner, args.timeout)
         results = []
+        if not args.quiet and args.format in ("table", "both"):
+            print(f"{'Size':>5} {'Variant':<10} {'Kernel':<14} {'Threads':>8}  "
+                  f"{'Latency':>14}  {'Throughput':>14}")
         for size in args.sizes:
             for threads in args.threads:
                 for kernel in kernels:
@@ -123,7 +126,8 @@ def main(argv: Sequence[str] | None = None) -> int:
                         gflops = operations / median_ns if median_ns > 0 else 0.0
                         record = {
                             "shape": {"m": size, "n": size, "k": size},
-                            "variant": variant, "kernel": last.get("kernel_used", kernel),
+                            "variant": variant, "kernel_requested": kernel,
+                            "kernel": last.get("kernel_used", kernel),
                             "threads": last.get("threads_used", 1),
                             "threads_requested": threads, "durations_ns": durations,
                             "median_ns": median_ns, "gflops": gflops,
@@ -134,15 +138,20 @@ def main(argv: Sequence[str] | None = None) -> int:
                             record["peak_efficiency_percent"] = gflops / args.peak_gflops * 100.0
                         results.append(record)
                         if not args.quiet and args.format in ("table", "both"):
-                            print(f"{size:>5} {variant:<10} {threads:>3} threads  "
-                                  f"{median_ns / 1e6:>10.4f} ms  {gflops:>9.3f} GFLOPS")
+                            print(f"{size:>5} {variant:<10} {record['kernel']:<14} "
+                                  f"{threads:>5}  {median_ns / 1e6:>10.4f} ms  "
+                                  f"{gflops:>9.3f} GFLOPS")
         naive_times = {
-            (item["shape"]["m"], item.get("threads_requested", item["threads"])): item["median_ns"]
+            (item["shape"]["m"], item.get("threads_requested", item["threads"]),
+             item.get("kernel_requested", "auto")): item["median_ns"]
             for item in results if item["variant"] == "naive"
         }
         for item in results:
             requested_threads = item.get("threads_requested", item["threads"])
-            baseline_ns = naive_times.get((item["shape"]["m"], requested_threads))
+            requested_kernel = item.get("kernel_requested", "auto")
+            baseline_ns = naive_times.get(
+                (item["shape"]["m"], requested_threads, requested_kernel)
+            )
             if baseline_ns and item["median_ns"] > 0:
                 item["speedup"] = baseline_ns / item["median_ns"]
 
@@ -175,7 +184,7 @@ def main(argv: Sequence[str] | None = None) -> int:
                             "os": client.info.get("os"), "info": client.info},
             "methodology": {"warmup": args.warmup, "repetitions": args.reps,
                             "launches": args.launches, "cache_state": args.cache_state,
-                            "seed": args.seed},
+                            "seed": args.seed, "kernels": kernels},
             "results": results,
         }
         if args.json_out:

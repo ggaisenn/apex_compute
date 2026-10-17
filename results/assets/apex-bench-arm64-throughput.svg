@@ -1,0 +1,39 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="900" height="520" viewBox="0 0 900 520">
+<rect width="100%" height="100%" fill="white"/>
+<text x="450" y="20" text-anchor="middle" font-family="sans-serif" font-size="16">APEX Compute throughput (GFLOPS)</text>
+<line x1="70" y1="330" x2="850" y2="330" stroke="#333"/>
+<line x1="70" y1="30" x2="70" y2="330" stroke="#333"/>
+<rect x="75.8" y="289.2" width="37.0" height="40.8" fill="#3568a8"><title>N64 naive/naive t1/1: 3.607 GFLOPS</title></rect>
+<rect x="124.6" y="293.6" width="37.0" height="36.4" fill="#3568a8"><title>N64 engine/scalar t1/1: 3.223 GFLOPS</title></rect>
+<rect x="173.3" y="290.4" width="37.0" height="39.6" fill="#3568a8"><title>N64 naive/naive t1/1: 3.501 GFLOPS</title></rect>
+<rect x="222.1" y="30.0" width="37.0" height="300.0" fill="#3568a8"><title>N64 engine/neon-4x4 t1/1: 26.546 GFLOPS</title></rect>
+<rect x="270.9" y="302.0" width="37.0" height="28.0" fill="#3568a8"><title>N128 naive/naive t1/1: 2.479 GFLOPS</title></rect>
+<rect x="319.6" y="302.6" width="37.0" height="27.4" fill="#3568a8"><title>N128 engine/scalar t1/1: 2.422 GFLOPS</title></rect>
+<rect x="368.4" y="300.0" width="37.0" height="30.0" fill="#3568a8"><title>N128 naive/naive t1/1: 2.651 GFLOPS</title></rect>
+<rect x="417.1" y="39.1" width="37.0" height="290.9" fill="#3568a8"><title>N128 engine/neon-4x4 t1/1: 25.742 GFLOPS</title></rect>
+<rect x="465.9" y="306.9" width="37.0" height="23.1" fill="#3568a8"><title>N256 naive/naive t1/1: 2.046 GFLOPS</title></rect>
+<rect x="514.6" y="305.9" width="37.0" height="24.1" fill="#3568a8"><title>N256 engine/scalar t1/1: 2.136 GFLOPS</title></rect>
+<rect x="563.4" y="305.8" width="37.0" height="24.2" fill="#3568a8"><title>N256 naive/naive t1/1: 2.138 GFLOPS</title></rect>
+<rect x="612.1" y="50.7" width="37.0" height="279.3" fill="#3568a8"><title>N256 engine/neon-4x4 t1/1: 24.711 GFLOPS</title></rect>
+<rect x="660.9" y="310.0" width="37.0" height="20.0" fill="#3568a8"><title>N512 naive/naive t1/1: 1.768 GFLOPS</title></rect>
+<rect x="709.6" y="309.1" width="37.0" height="20.9" fill="#3568a8"><title>N512 engine/scalar t1/1: 1.847 GFLOPS</title></rect>
+<rect x="758.4" y="309.1" width="37.0" height="20.9" fill="#3568a8"><title>N512 naive/naive t1/1: 1.850 GFLOPS</title></rect>
+<rect x="807.1" y="46.9" width="37.0" height="283.1" fill="#3568a8"><title>N512 engine/neon-4x4 t1/1: 25.047 GFLOPS</title></rect>
+<text x="94.4" y="422" text-anchor="end" transform="rotate(-55 94.4 422)" font-size="9">N64 naive/naive t1/1</text>
+<text x="143.1" y="422" text-anchor="end" transform="rotate(-55 143.1 422)" font-size="9">N64 engine/scalar t1/1</text>
+<text x="191.9" y="422" text-anchor="end" transform="rotate(-55 191.9 422)" font-size="9">N64 naive/naive t1/1</text>
+<text x="240.6" y="422" text-anchor="end" transform="rotate(-55 240.6 422)" font-size="9">N64 engine/neon-4x4 t1/1</text>
+<text x="289.4" y="422" text-anchor="end" transform="rotate(-55 289.4 422)" font-size="9">N128 naive/naive t1/1</text>
+<text x="338.1" y="422" text-anchor="end" transform="rotate(-55 338.1 422)" font-size="9">N128 engine/scalar t1/1</text>
+<text x="386.9" y="422" text-anchor="end" transform="rotate(-55 386.9 422)" font-size="9">N128 naive/naive t1/1</text>
+<text x="435.6" y="422" text-anchor="end" transform="rotate(-55 435.6 422)" font-size="9">N128 engine/neon-4x4 t1/</text>
+<text x="484.4" y="422" text-anchor="end" transform="rotate(-55 484.4 422)" font-size="9">N256 naive/naive t1/1</text>
+<text x="533.1" y="422" text-anchor="end" transform="rotate(-55 533.1 422)" font-size="9">N256 engine/scalar t1/1</text>
+<text x="581.9" y="422" text-anchor="end" transform="rotate(-55 581.9 422)" font-size="9">N256 naive/naive t1/1</text>
+<text x="630.6" y="422" text-anchor="end" transform="rotate(-55 630.6 422)" font-size="9">N256 engine/neon-4x4 t1/</text>
+<text x="679.4" y="422" text-anchor="end" transform="rotate(-55 679.4 422)" font-size="9">N512 naive/naive t1/1</text>
+<text x="728.1" y="422" text-anchor="end" transform="rotate(-55 728.1 422)" font-size="9">N512 engine/scalar t1/1</text>
+<text x="776.9" y="422" text-anchor="end" transform="rotate(-55 776.9 422)" font-size="9">N512 naive/naive t1/1</text>
+<text x="825.6" y="422" text-anchor="end" transform="rotate(-55 825.6 422)" font-size="9">N512 engine/neon-4x4 t1/</text>
+<text x="18" y="180" transform="rotate(-90 18 180)" font-family="sans-serif" font-size="12">GFLOPS</text>
+</svg>

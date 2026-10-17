@@ -37,6 +37,14 @@ bower_components
 # Compiled binary addons (https://nodejs.org/api/addons.html)
 build/Release
 
+# CMake build trees
+/build/
+/cmake-build-*/
+
+# Python bytecode and caches
+__pycache__/
+*.py[cod]
+
 # Dependency directories
 node_modules/
 jspm_packages/

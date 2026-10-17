@@ -82,6 +82,54 @@ def _read_result(path: Path) -> dict[str, Any]:
     return value
 
 
+def _local_interpretation(facts: dict[str, Any]) -> str:
+    """Summarize a benchmark using only values from the verified result log."""
+    document = facts.get("document", {})
+    records = document.get("results", []) if isinstance(document, dict) else []
+    if isinstance(records, list):
+        for baseline in records:
+            if not isinstance(baseline, dict) or baseline.get("variant") != "naive":
+                continue
+            shape = baseline.get("shape", {})
+            if not isinstance(shape, dict):
+                continue
+            engine = next((record for record in records
+                           if isinstance(record, dict)
+                           and record.get("variant") == "engine"
+                           and record.get("shape") == shape
+                           and record.get("threads") == baseline.get("threads")), None)
+            if engine is None:
+                continue
+            shape_label = "×".join(str(shape.get(axis, "?")) for axis in ("m", "n", "k"))
+            naive_ms = float(baseline.get("median_ns", 0)) / 1_000_000
+            engine_ms = float(engine.get("median_ns", 0)) / 1_000_000
+            naive_gflops = float(baseline.get("gflops", 0))
+            engine_gflops = float(engine.get("gflops", 0))
+            speedup = float(engine.get("speedup", 1))
+            engine_kernel = str(engine.get("kernel", "unknown"))
+            return (
+                f"The data table is authoritative. For {shape_label} using "
+                f"{baseline.get('threads', 1)} thread(s), engine ({engine_kernel}) took "
+                f"{engine_ms:.4f} ms "
+                f"at {engine_gflops:.4f} GFLOPS, compared with naive at {naive_ms:.4f} ms "
+                f"and {naive_gflops:.4f} GFLOPS. The reported engine speedup is {speedup:.3f}×."
+            )
+    return (
+        "The data table is authoritative. Compare latency (time taken) and GFLOPS "
+        "(processing rate) across the listed results."
+    )
+
+
+def _contains_model_notes(text: str) -> bool:
+    lowered = text.casefold()
+    markers = (
+        "draft", "self-correction", "final polish", "check constraints",
+        "data analysis", "avoidance check", "technical beginner friendliness",
+        "begin_facts_json", "input: a json object", "authoritative statement",
+    )
+    return any(marker in lowered for marker in markers)
+
+
 def _failure_exit(returncode: int) -> int:
     return 1 if returncode == 1 else 3 if returncode == 3 else 4
 
@@ -175,9 +223,11 @@ def main(argv: Sequence[str] | None = None) -> int:
                         continue
                 checked = check_explanation(narrative, last_facts)
                 print("Interpretation:")
-                print(checked["text"])
-                if checked["unverified"]:
-                    print("Unverified figures: " + ", ".join(checked["unverified"]))
+                if (checked["withheld"] or checked["unverified"]
+                        or _contains_model_notes(narrative)):
+                    print(_local_interpretation(last_facts))
+                else:
+                    print(checked["text"])
                 continue
 
             item = next(item for item in executable_items if item[0] == index)

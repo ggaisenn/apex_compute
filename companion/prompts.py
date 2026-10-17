@@ -34,9 +34,11 @@ def interpretation_prompt(request: str, available_kernels: list[str] | None = No
 
 def explanation_prompt(facts: dict[str, Any], focus: str) -> str:
     return (
-        "Explain these benchmark or validation facts for a technical beginner. "
-        "Use only numbers present in the supplied facts. Do not infer hardware causes. "
-        "Mention that the data table is authoritative. The focus is " + json.dumps(focus) + ".\n"
+        "Write the final answer for a technical beginner in at most three short sentences. "
+        "Return only that answer. Do not include analysis, drafts, checklists, prompt text, "
+        "or a restatement of the input. Use only numbers present in the facts. Do not infer "
+        "hardware causes. State that the data table is authoritative. Focus: "
+        + json.dumps(focus) + ".\n"
         "BEGIN_FACTS_JSON\n"
         + json.dumps({"markdown": facts.get("markdown", ""),
                       "numeric_facts": facts.get("numbers", [])}, ensure_ascii=True)

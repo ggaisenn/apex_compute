@@ -1,0 +1,484 @@
+{
+  "schema": {
+    "name": "apex.bench.log",
+    "version": 1
+  },
+  "environment": {
+    "runner": "apex-runner",
+    "architecture": "arm64",
+    "os": "macos",
+    "info": {
+      "schema": {
+        "name": "apex.runner.info",
+        "version": 1
+      },
+      "contract": {
+        "major": 1,
+        "minor": 0
+      },
+      "runner": "apex-runner",
+      "library_version": "0.1.0",
+      "architecture": "arm64",
+      "os": "macos",
+      "features": {
+        "neon": true,
+        "avx2": false,
+        "avx512f": false,
+        "fma": false
+      },
+      "cache_bytes": {
+        "l1d": 65536,
+        "l2": 4194304,
+        "l3": 8388608,
+        "line": 128
+      },
+      "kernel": "neon-4x4",
+      "variants": [
+        "engine",
+        "naive",
+        "reference"
+      ]
+    }
+  },
+  "methodology": {
+    "warmup": 2,
+    "repetitions": 5,
+    "launches": 2,
+    "cache_state": "warm",
+    "seed": 1
+  },
+  "results": [
+    {
+      "shape": {
+        "m": 64,
+        "n": 64,
+        "k": 64
+      },
+      "variant": "naive",
+      "kernel": "naive",
+      "threads": 1,
+      "threads_requested": 1,
+      "durations_ns": [
+        138750,
+        142500,
+        143584,
+        144333,
+        148833,
+        143791,
+        146334,
+        148791,
+        151750,
+        158542
+      ],
+      "median_ns": 145333.5,
+      "gflops": 3.6074821015113514,
+      "checksum": 9686430306958200197,
+      "speedup": 1.0305332218655712
+    },
+    {
+      "shape": {
+        "m": 64,
+        "n": 64,
+        "k": 64
+      },
+      "variant": "engine",
+      "kernel": "scalar",
+      "threads": 1,
+      "threads_requested": 1,
+      "durations_ns": [
+        159042,
+        161458,
+        163875,
+        163875,
+        165000,
+        154625,
+        154708,
+        154708,
+        168834,
+        187500
+      ],
+      "median_ns": 162666.5,
+      "gflops": 3.2230852695545793,
+      "checksum": 9686430306958200197,
+      "speedup": 0.9207243040208033
+    },
+    {
+      "shape": {
+        "m": 64,
+        "n": 64,
+        "k": 64
+      },
+      "variant": "naive",
+      "kernel": "naive",
+      "threads": 1,
+      "threads_requested": 1,
+      "durations_ns": [
+        148750,
+        148792,
+        149375,
+        150167,
+        150375,
+        144834,
+        144958,
+        156208,
+        157500,
+        168125
+      ],
+      "median_ns": 149771.0,
+      "gflops": 3.5005975789705617,
+      "checksum": 9686430306958200197,
+      "speedup": 1.0
+    },
+    {
+      "shape": {
+        "m": 64,
+        "n": 64,
+        "k": 64
+      },
+      "variant": "engine",
+      "kernel": "neon-4x4",
+      "threads": 1,
+      "threads_requested": 1,
+      "durations_ns": [
+        19333,
+        19375,
+        19375,
+        19417,
+        19417,
+        20083,
+        20125,
+        20208,
+        20959,
+        21000
+      ],
+      "median_ns": 19750.0,
+      "gflops": 26.546227848101267,
+      "checksum": 9686430306958200197,
+      "speedup": 7.583341772151899
+    },
+    {
+      "shape": {
+        "m": 128,
+        "n": 128,
+        "k": 128
+      },
+      "variant": "naive",
+      "kernel": "naive",
+      "threads": 1,
+      "threads_requested": 1,
+      "durations_ns": [
+        1584416,
+        1592958,
+        1632584,
+        1699958,
+        1703500,
+        1599125,
+        1684125,
+        1704792,
+        1770291,
+        1909667
+      ],
+      "median_ns": 1692041.5,
+      "gflops": 2.4788422742586396,
+      "checksum": 6812922071293340194,
+      "speedup": 0.9351992844147144
+    },
+    {
+      "shape": {
+        "m": 128,
+        "n": 128,
+        "k": 128
+      },
+      "variant": "engine",
+      "kernel": "scalar",
+      "threads": 1,
+      "threads_requested": 1,
+      "durations_ns": [
+        1614042,
+        1729583,
+        1805417,
+        1925166,
+        2034333,
+        1579875,
+        1618250,
+        1642792,
+        1734125,
+        1785917
+      ],
+      "median_ns": 1731854.0,
+      "gflops": 2.4218577316563636,
+      "checksum": 6812922071293340194,
+      "speedup": 0.9137005775313624
+    },
+    {
+      "shape": {
+        "m": 128,
+        "n": 128,
+        "k": 128
+      },
+      "variant": "naive",
+      "kernel": "naive",
+      "threads": 1,
+      "threads_requested": 1,
+      "durations_ns": [
+        1590292,
+        1600666,
+        1688958,
+        1915250,
+        2013500,
+        1531209,
+        1551125,
+        1562000,
+        1568917,
+        1574500
+      ],
+      "median_ns": 1582396.0,
+      "gflops": 2.6506032623944953,
+      "checksum": 6812922071293340194,
+      "speedup": 1.0
+    },
+    {
+      "shape": {
+        "m": 128,
+        "n": 128,
+        "k": 128
+      },
+      "variant": "engine",
+      "kernel": "neon-4x4",
+      "threads": 1,
+      "threads_requested": 1,
+      "durations_ns": [
+        161000,
+        162375,
+        163083,
+        163583,
+        167500,
+        162875,
+        162875,
+        162917,
+        162958,
+        163125
+      ],
+      "median_ns": 162937.5,
+      "gflops": 25.741796701189106,
+      "checksum": 6812922071293340194,
+      "speedup": 9.71167472190257
+    },
+    {
+      "shape": {
+        "m": 256,
+        "n": 256,
+        "k": 256
+      },
+      "variant": "naive",
+      "kernel": "naive",
+      "threads": 1,
+      "threads_requested": 1,
+      "durations_ns": [
+        15907541,
+        16211333,
+        16245125,
+        16492333,
+        16758333,
+        16326708,
+        16372542,
+        16421958,
+        16749667,
+        17655208
+      ],
+      "median_ns": 16397250.0,
+      "gflops": 2.04634508835323,
+      "checksum": 7807244760771988674,
+      "speedup": 0.957021512753663
+    },
+    {
+      "shape": {
+        "m": 256,
+        "n": 256,
+        "k": 256
+      },
+      "variant": "engine",
+      "kernel": "scalar",
+      "threads": 1,
+      "threads_requested": 1,
+      "durations_ns": [
+        16074625,
+        16177917,
+        16313250,
+        16335750,
+        16423958,
+        14903709,
+        15030458,
+        15093333,
+        15110791,
+        15348375
+      ],
+      "median_ns": 15711500.0,
+      "gflops": 2.1356606307481782,
+      "checksum": 7807244760771988674,
+      "speedup": 0.9987920313146421
+    },
+    {
+      "shape": {
+        "m": 256,
+        "n": 256,
+        "k": 256
+      },
+      "variant": "naive",
+      "kernel": "naive",
+      "threads": 1,
+      "threads_requested": 1,
+      "durations_ns": [
+        15633750,
+        15667167,
+        15717875,
+        15728167,
+        16331792,
+        15261208,
+        15289125,
+        15341333,
+        15782750,
+        16033750
+      ],
+      "median_ns": 15692521.0,
+      "gflops": 2.1382435620127573,
+      "checksum": 7807244760771988674,
+      "speedup": 1.0
+    },
+    {
+      "shape": {
+        "m": 256,
+        "n": 256,
+        "k": 256
+      },
+      "variant": "engine",
+      "kernel": "neon-4x4",
+      "threads": 1,
+      "threads_requested": 1,
+      "durations_ns": [
+        1368125,
+        1436833,
+        1448750,
+        1565667,
+        1629208,
+        1318333,
+        1319041,
+        1328417,
+        1347250,
+        1347583
+      ],
+      "median_ns": 1357854.0,
+      "gflops": 24.71136955814101,
+      "checksum": 7807244760771988674,
+      "speedup": 11.55685441881086
+    },
+    {
+      "shape": {
+        "m": 512,
+        "n": 512,
+        "k": 512
+      },
+      "variant": "naive",
+      "kernel": "naive",
+      "threads": 1,
+      "threads_requested": 1,
+      "durations_ns": [
+        147914542,
+        148004333,
+        148540416,
+        154530459,
+        156560458,
+        146721500,
+        149191625,
+        159616209,
+        174813292,
+        190212333
+      ],
+      "median_ns": 151861042.0,
+      "gflops": 1.767638707496818,
+      "checksum": 4272344129855597979,
+      "speedup": 0.9553598216453697
+    },
+    {
+      "shape": {
+        "m": 512,
+        "n": 512,
+        "k": 512
+      },
+      "variant": "engine",
+      "kernel": "scalar",
+      "threads": 1,
+      "threads_requested": 1,
+      "durations_ns": [
+        144565792,
+        145472417,
+        146631417,
+        150883959,
+        164382000,
+        144416958,
+        144581250,
+        144739334,
+        145265208,
+        148829459
+      ],
+      "median_ns": 145368812.5,
+      "gflops": 1.846582161493546,
+      "checksum": 4272344129855597979,
+      "speedup": 0.9980265746478462
+    },
+    {
+      "shape": {
+        "m": 512,
+        "n": 512,
+        "k": 512
+      },
+      "variant": "naive",
+      "kernel": "naive",
+      "threads": 1,
+      "threads_requested": 1,
+      "durations_ns": [
+        144606708,
+        144712542,
+        144796708,
+        145004834,
+        145159042,
+        144998541,
+        147965542,
+        149970917,
+        153829833,
+        163817250
+      ],
+      "median_ns": 145081938.0,
+      "gflops": 1.8502334591091554,
+      "checksum": 4272344129855597979,
+      "speedup": 1.0
+    },
+    {
+      "shape": {
+        "m": 512,
+        "n": 512,
+        "k": 512
+      },
+      "variant": "engine",
+      "kernel": "neon-4x4",
+      "threads": 1,
+      "threads_requested": 1,
+      "durations_ns": [
+        10566458,
+        10732000,
+        10779917,
+        10791917,
+        10801625,
+        10427375,
+        10649625,
+        10687875,
+        10702750,
+        10788833
+      ],
+      "median_ns": 10717375.0,
+      "gflops": 25.046754079240486,
+      "checksum": 4272344129855597979,
+      "speedup": 13.537077689266262
+    }
+  ]
+}
