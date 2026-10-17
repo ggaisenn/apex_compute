@@ -15,7 +15,23 @@ namespace apex::gemm {
 using ThreadPoolTask = Status (*)(
     void* context,
     std::size_t worker_index,
-    std::size_t worker_count) noexcept;
+    std::size_t worker_count);
+
+namespace detail {
+
+[[nodiscard]] inline Status invoke_thread_pool_task(
+    ThreadPoolTask task,
+    void* context,
+    std::size_t worker_index,
+    std::size_t worker_count) noexcept {
+    try {
+        return task(context, worker_index, worker_count);
+    } catch (...) {
+        return Status::InternalError;
+    }
+}
+
+}  // namespace detail
 
 #if defined(__unix__) || defined(__APPLE__)
 
@@ -110,11 +126,11 @@ public:
         // A concurrent caller owns its own job and runs synchronously.
         if (job_running_) {
             pthread_mutex_unlock(&mutex_);
-            return task(context, 0, 1);
+            return detail::invoke_thread_pool_task(task, context, 0, 1);
         }
         if (workers_.empty()) {
             pthread_mutex_unlock(&mutex_);
-            return task(context, 0, 1);
+            return detail::invoke_thread_pool_task(task, context, 0, 1);
         }
 
         job_ = task;
@@ -133,7 +149,8 @@ public:
         }
         pthread_mutex_unlock(&mutex_);
 
-        const Status caller_status = task(context, 0, job_worker_count_);
+        const Status caller_status = detail::invoke_thread_pool_task(
+            task, context, 0, job_worker_count_);
 
         if (pthread_mutex_lock(&mutex_) != 0) {
             return Status::InternalError;
@@ -258,7 +275,8 @@ private:
             pthread_mutex_unlock(&mutex_);
             const Status task_status = task == nullptr
                 ? Status::InternalError
-                : task(context, worker.index, count);
+                : detail::invoke_thread_pool_task(
+                    task, context, worker.index, count);
             if (pthread_mutex_lock(&mutex_) != 0) {
                 return;
             }
@@ -342,7 +360,7 @@ public:
         if (stopped_) {
             return Status::Unsupported;
         }
-        return task(context, 0, 1);
+        return detail::invoke_thread_pool_task(task, context, 0, 1);
     }
 
     [[nodiscard]] std::size_t worker_count() const noexcept { return 1; }
