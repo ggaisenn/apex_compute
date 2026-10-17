@@ -36,6 +36,7 @@ constexpr std::array<Shape, 8> kShapes{{
 }};
 
 constexpr std::array<float, 5> kScales{{0.0F, 1.0F, -1.0F, 0.5F, -0.75F}};
+constexpr std::array<int, 7> kMagnitudeExponents{{-64, -50, -30, 0, 30, 50, 60}};
 
 [[nodiscard]] bool copy_matrix(
     apex::gemm::MatrixView source,
@@ -84,14 +85,18 @@ constexpr std::array<float, 5> kScales{{0.0F, 1.0F, -1.0F, 0.5F, -0.75F}};
     std::size_t inner_dimension,
     double scale) noexcept {
     constexpr double unit_roundoff = 0x1p-24;
-    const double operation_count = static_cast<double>(inner_dimension) + 3.0;
+    const double operation_count =
+        2.0 * static_cast<double>(inner_dimension) + 3.0;
     const double scaled_roundoff = operation_count * unit_roundoff;
     if (scaled_roundoff >= 1.0) {
-        return std::numeric_limits<double>::infinity();
+        return std::numeric_limits<double>::quiet_NaN();
     }
 
     const double gamma = scaled_roundoff / (1.0 - scaled_roundoff);
-    return gamma * scale + static_cast<double>(std::numeric_limits<float>::min());
+    // Two bounds cover legal single-precision reductions with different orders;
+    // fused multiply-add uses fewer roundings and remains within this limit.
+    return 2.0 * gamma * scale +
+        static_cast<double>(std::numeric_limits<float>::min());
 }
 
 void record_failure(ValidationSummary* summary) noexcept {
@@ -104,6 +109,7 @@ void record_failure(ValidationSummary* summary) noexcept {
     float beta,
     bool poison_ignored_inputs,
     bool poison_ignored_output,
+    int magnitude_exponent,
     std::uint64_t seed,
     ValidationSummary* summary) noexcept {
     apex::gemm::Matrix a;
@@ -132,6 +138,26 @@ void record_failure(ValidationSummary* summary) noexcept {
         std::fprintf(stderr, "FAIL input generation for shape %zux%zux%zu\n",
             shape.rows, shape.inner, shape.columns);
         return false;
+    }
+
+    const int output_exponent = 2 * magnitude_exponent;
+    for (std::size_t row = 0; row < a.rows(); ++row) {
+        for (std::size_t column = 0; column < a.columns(); ++column) {
+            a.view()(row, column) =
+                std::scalbn(a.view()(row, column), magnitude_exponent);
+        }
+    }
+    for (std::size_t row = 0; row < b.rows(); ++row) {
+        for (std::size_t column = 0; column < b.columns(); ++column) {
+            b.view()(row, column) =
+                std::scalbn(b.view()(row, column), magnitude_exponent);
+        }
+    }
+    for (std::size_t row = 0; row < initial_c.rows(); ++row) {
+        for (std::size_t column = 0; column < initial_c.columns(); ++column) {
+            initial_c.view()(row, column) =
+                std::scalbn(initial_c.view()(row, column), output_exponent);
+        }
     }
 
     if (poison_ignored_inputs) {
@@ -201,14 +227,16 @@ void record_failure(ValidationSummary* summary) noexcept {
                 summary->worst_ratio = ratio;
             }
 
-            if (!std::isfinite(expected) || !std::isfinite(actual) || error > tolerance) {
+            if (!std::isfinite(expected) || !std::isfinite(actual) ||
+                !std::isfinite(tolerance) || error > tolerance) {
                 passed = false;
                 std::fprintf(stderr,
                     "FAIL element shape=%zux%zux%zu row=%zu column=%zu "
-                    "alpha=%g beta=%g expected=%.9g actual=%.9g error=%.3e tol=%.3e\n",
+                    "exp2=%d alpha=%g beta=%g expected=%.9g actual=%.9g "
+                    "error=%.3e tol=%.3e\n",
                     shape.rows, shape.inner, shape.columns, row, column,
-                    static_cast<double>(alpha), static_cast<double>(beta), expected,
-                    actual, error, tolerance);
+                    magnitude_exponent, static_cast<double>(alpha),
+                    static_cast<double>(beta), expected, actual, error, tolerance);
                 break;
             }
         }
@@ -232,11 +260,14 @@ int main() {
             for (const float beta : kScales) {
                 const bool poison_inputs = alpha == 0.0F;
                 const bool poison_output = beta == 0.0F;
-                (void)run_case(
-                    shape, alpha, beta, poison_inputs, poison_output,
-                    static_cast<std::uint64_t>(shape.rows * 131U +
-                        shape.inner * 17U + shape.columns),
-                    &summary);
+                for (std::size_t regime = 0; regime < kMagnitudeExponents.size(); ++regime) {
+                    (void)run_case(
+                        shape, alpha, beta, poison_inputs, poison_output,
+                        kMagnitudeExponents[regime],
+                        static_cast<std::uint64_t>(shape.rows * 131U +
+                            shape.inner * 17U + shape.columns + regime),
+                        &summary);
+                }
             }
         }
     }
