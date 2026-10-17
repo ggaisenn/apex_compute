@@ -40,10 +40,24 @@ endif()
 
 add_executable(apex-validate
     apex-validate/validate_engine.cpp
+    kernels/avx512/gemm_avx512_kernel.cpp
     core/orchestration/gemm_engine.cpp
     kernels/neon/gemm_neon_kernel.cpp
     kernels/packing.cpp)
 target_include_directories(apex-validate PRIVATE ${CMAKE_CURRENT_SOURCE_DIR})
+
+if(NOT APEX_FORCE_SCALAR AND
+   CMAKE_SYSTEM_PROCESSOR MATCHES "^(x86_64|AMD64|amd64|i[3-6]86)$")
+    if(MSVC)
+        set_source_files_properties(
+            kernels/avx512/gemm_avx512_kernel.cpp
+            PROPERTIES COMPILE_OPTIONS "/arch:AVX512")
+    elseif(CMAKE_CXX_COMPILER_ID MATCHES "GNU|Clang|AppleClang")
+        set_source_files_properties(
+            kernels/avx512/gemm_avx512_kernel.cpp
+            PROPERTIES COMPILE_OPTIONS "-mavx512f")
+    endif()
+endif()
 
 add_library(apex-bench-engine STATIC apex-bench/bench_engine.cpp)
 target_include_directories(apex-bench-engine PUBLIC ${CMAKE_CURRENT_SOURCE_DIR})
