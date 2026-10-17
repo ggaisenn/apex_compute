@@ -50,6 +50,7 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--threshold", type=float, default=0.0, help="Regression threshold percentage")
     parser.add_argument("--report", type=Path, help="Generate Markdown and SVG from an existing JSON log")
     parser.add_argument("--report-out", type=Path, help="Directory for generated report files")
+    parser.add_argument("--environment", action="store_true", help="Print the runner environment record and exit")
     parser.add_argument("--verbose", action="store_true")
     parser.add_argument("--quiet", action="store_true")
     return parser
@@ -58,6 +59,19 @@ def build_parser() -> argparse.ArgumentParser:
 def main(argv: Sequence[str] | None = None) -> int:
     parser = build_parser()
     args = parser.parse_args(argv)
+    if args.environment:
+        try:
+            client = RunnerClient(args.runner, args.timeout)
+            payload = json.dumps(client.info, indent=2) + "\n"
+            if args.json_out:
+                args.json_out.parent.mkdir(parents=True, exist_ok=True)
+                args.json_out.write_text(payload, encoding="utf-8")
+            if not args.quiet:
+                print(payload, end="")
+            return 0
+        except (RunnerError, OSError) as exc:
+            print(f"apex-bench: {exc}", file=sys.stderr)
+            return 3
     if args.report:
         try:
             markdown, throughput_svg, speedup_svg = generate_report(args.report, args.report_out)

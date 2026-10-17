@@ -1,0 +1,49 @@
+{
+  "schema": "apex.companion.fixtures",
+  "version": 1,
+  "demos": [
+    {
+      "match": "benchmark a small square multiply",
+      "plan": {
+        "operations": [
+          {
+            "op": "benchmark",
+            "sizes": [16],
+            "threads": [1],
+            "kernels": ["auto"],
+            "variants": ["naive", "engine"],
+            "profile": "smoke",
+            "seed": 2026,
+            "repetitions": 3,
+            "warmup": 1
+          },
+          {"op": "explain_last", "focus": "overall"}
+        ]
+      },
+      "narrative": "The engine and naive implementation were measured on the requested shapes. Compare their reported latency and throughput in the facts table; the table contains the authoritative values.",
+      "replay_results": {
+        "schema": {"name": "apex.bench.log", "version": 1},
+        "environment": {"runner": "offline-fixture", "architecture": "portable", "os": "offline"},
+        "methodology": {"warmup": 1, "repetitions": 3, "launches": 1, "cache_state": "warm", "seed": 2026},
+        "results": [
+          {"shape": {"m": 16, "n": 16, "k": 16}, "variant": "naive", "threads": 1, "median_ns": 45000, "gflops": 0.182, "speedup": 1.0},
+          {"shape": {"m": 16, "n": 16, "k": 16}, "variant": "engine", "threads": 1, "median_ns": 17000, "gflops": 0.482, "speedup": 2.65}
+        ]
+      }
+    },
+    {
+      "match": "validate edge cases",
+      "plan": {
+        "operations": [
+          {"op": "validate", "sizes": [1, 15, 16, 17], "threads": [1], "kernels": ["scalar"], "profile": "smoke", "seed": 7}
+        ]
+      },
+      "narrative": "The recorded validation request covers single-element and nearby boundary dimensions. Run locally to obtain current machine results."
+    },
+    {
+      "match": "show the environment",
+      "plan": {"operations": [{"op": "environment"}]},
+      "narrative": "The environment facts come from the local runner handshake."
+    }
+  ]
+}

@@ -133,3 +133,39 @@ jobs:
           name: validation-portable-scalar
           path: build/portable/validation.json
           if-no-files-found: ignore
+
+  companion-offline:
+    name: Companion with local mock Gemini
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out source
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.x"
+
+      - name: Build local runner
+        run: |
+          cmake --preset debug
+          cmake --build --preset debug --parallel
+
+      - name: Run recorded offline demonstration
+        run: python -m companion --offline --replay-results --yes "benchmark a small square multiply"
+
+      - name: Run live protocol against local mock service
+        env:
+          GEMINI_API_KEY: local-ci-placeholder
+          APEX_GEMINI_ENDPOINT: http://127.0.0.1:8765
+        run: |
+          python -m companion.tests.mock.mock_gemini_server --host 127.0.0.1 --port 8765 &
+          MOCK_PID=$!
+          trap 'kill "$MOCK_PID" 2>/dev/null || true' EXIT
+          for attempt in $(seq 1 30); do
+            if python -c 'import urllib.request; urllib.request.urlopen("http://127.0.0.1:8765/health", timeout=1)' 2>/dev/null; then
+              break
+            fi
+            sleep 1
+          done
+          python -m companion --yes "benchmark a small matrix"
