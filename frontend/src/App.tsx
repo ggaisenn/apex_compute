@@ -3,7 +3,7 @@ import type { ChangeEvent, ReactNode } from "react";
 import { getSnapshot, formatNumber, sizes, snapshotFromImportedLog } from "./data";
 import Icon from "./components/Icon";
 import { ThreeScene } from "./components/ThreeScene";
-import type { BenchmarkSnapshot, Kernel, MatrixSize, Page, RunMode } from "./types";
+import type { BenchmarkSnapshot, Kernel, MatrixSize, Page, RunMode, Theme } from "./types";
 
 const navItems: Array<{ id: Page; label: string; detail: string; icon: "gauge" | "layers" | "cpu" | "users" }> = [
   { id: "home", label: "Overview", detail: "home", icon: "gauge" },
@@ -78,6 +78,10 @@ const ThreadGrid = ({ selectedThread }: { selectedThread: number }) => (
 
 const App = () => {
   const [page, setPage] = useState<Page>("home");
+  const [theme, setTheme] = useState<Theme>(() => {
+    if (typeof window === "undefined") return "dark";
+    return window.localStorage.getItem("apex-compute-theme") === "light" ? "light" : "dark";
+  });
   const [size, setSize] = useState<MatrixSize>(256);
   const [kernel, setKernel] = useState<Kernel>("neon-4x4");
   const [mode, setMode] = useState<RunMode>("engine");
@@ -88,6 +92,11 @@ const App = () => {
   const [notice, setNotice] = useState("Demo data loaded from the latest local benchmark export");
   const [selectedThread, setSelectedThread] = useState(0);
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    document.documentElement.dataset.theme = theme;
+    window.localStorage.setItem("apex-compute-theme", theme);
+  }, [theme]);
 
   useEffect(() => {
     if (!playing) return undefined;
@@ -126,6 +135,10 @@ const App = () => {
     setPlaying(false);
     setStep(0);
     setNotice("Animation reset to tile 01");
+  };
+
+  const toggleTheme = () => {
+    setTheme((current) => (current === "dark" ? "light" : "dark"));
   };
 
   const handleImport = async (event: ChangeEvent<HTMLInputElement>) => {
@@ -169,7 +182,7 @@ const App = () => {
         </div>
         <div className="hero-visual panel panel-glow">
           <div className="visual-topline"><span>LIVE ALLOCATION / TILE {String(activeTile).padStart(2, "0")}</span><span className="visual-rec"><i /> 60 FPS</span></div>
-          <ThreeScene compact size={size} kernel={kernel} mode={mode} playing={playing} speed={speed} step={step} />
+          <ThreeScene compact size={size} theme={theme} kernel={kernel} mode={mode} playing={playing} speed={speed} step={step} />
           <div className="visual-legend"><span><i className="legend-cyan" /> A panel</span><span><i className="legend-violet" /> B panel</span><span><i className="legend-amber" /> C accumulator</span></div>
         </div>
       </section>
@@ -213,7 +226,7 @@ const App = () => {
         <button className="button button-primary" onClick={handleNextTile}><Icon name="chevron-right" size={15} /> Next tile</button>
       </PageTitle>
       <section className="execution-layout">
-        <div className="panel execution-visual"><div className="visual-topline"><span>GEMM PIPELINE / {size}³</span><StatusPill tone={mode === "naive" ? "amber" : "green"}>{mode} path</StatusPill></div><ThreeScene size={size} speed={speed} kernel={kernel} mode={mode} playing={playing} step={step} /><div className="timeline"><div className="timeline-label"><span>tile {String(activeTile).padStart(2, "0")} / 12</span><span>{Math.round((activeTile / 12) * 100)}%</span></div><div className="timeline-track"><span style={{ width: `${(activeTile / 12) * 100}%` }} /></div><div className="timeline-steps"><span>A load</span><span>B load</span><span>FMA</span><span>C store</span></div></div></div>
+        <div className="panel execution-visual"><div className="visual-topline"><span>GEMM PIPELINE / {size}³</span><StatusPill tone={mode === "naive" ? "amber" : "green"}>{mode} path</StatusPill></div><ThreeScene size={size} theme={theme} speed={speed} kernel={kernel} mode={mode} playing={playing} step={step} /><div className="timeline"><div className="timeline-label"><span>tile {String(activeTile).padStart(2, "0")} / 12</span><span>{Math.round((activeTile / 12) * 100)}%</span></div><div className="timeline-track"><span style={{ width: `${(activeTile / 12) * 100}%` }} /></div><div className="timeline-steps"><span>A load</span><span>B load</span><span>FMA</span><span>C store</span></div></div></div>
         <aside className="execution-aside"><div className="panel control-panel"><PanelHeading label="Playback controls" /><label className="range-label"><span>animation speed</span><b>{speed}%</b><input max="100" min="10" onChange={(event) => setSpeed(Number(event.target.value))} type="range" value={speed} /></label><div className="select-stack"><span>execution path</span><div className="segmented"><button className={mode === "naive" ? "is-active" : ""} onClick={() => setMode("naive")}>naive</button><button className={mode === "engine" ? "is-active" : ""} onClick={() => setMode("engine")}>engine</button></div></div><div className="select-stack"><span>matrix dimension</span><div className="size-pills">{sizes.map((item) => <button className={size === item ? "is-active" : ""} key={item} onClick={() => updateSize(item)}>{item}</button>)}</div></div><button className="reset-button" onClick={handleReset}><Icon name="refresh" size={14} /> Reset animation</button></div><div className="panel explanation-panel"><div className="explanation-icon"><Icon name="spark" size={18} /></div><span className="eyebrow">WHAT IS HAPPENING</span><h3>{mode === "naive" ? "The memory walk is scattered." : "The working set stays hot."}</h3><p>{mode === "naive" ? "A naive traversal jumps across rows. The visualized red pulses represent cache lines fetched without reuse." : `Tile ${activeTile} packs A and B panels into contiguous scratch buffers before the micro-kernel accumulates into C.`}</p><div className="explanation-detail"><span>current operation</span><strong>{mode === "naive" ? "cache miss / reload" : activeTile % 3 === 0 ? "fused multiply-add" : "packed panel load"}</strong></div></div></aside>
       </section>
       <section className="metrics-strip panel"><Metric label="L1 hit ratio" value={formatNumber(snapshot.l1Hit)} unit="%" accent="cyan" /><Metric label="L2 hit ratio" value={formatNumber(snapshot.l2Hit)} unit="%" accent="violet" /><Metric label="memory bandwidth" value={formatNumber(snapshot.bandwidth)} unit=" GB/s" accent="amber" /><Metric label="active accumulator" value={`C${activeTile}`} accent="green" /></section>
@@ -239,7 +252,7 @@ const App = () => {
   return (
     <div className="app-shell">
       <aside className="sidebar"><div className="brand"><span className="brand-mark"><span /><span /><span /></span><span>APEX<span className="brand-muted">/</span>COMPUTE</span></div><div className="sidebar-section-label">Visualizer</div><nav>{navItems.map((item) => <button className={`nav-item ${page === item.id ? "is-active" : ""}`} key={item.id} onClick={() => setPage(item.id)}><span className="nav-icon"><Icon name={item.icon} size={17} /></span><span>{item.label}</span><small>{item.detail}</small></button>)}</nav><div className="sidebar-bottom"><div className="system-card"><div className="system-card-head"><span className="system-live"><i /> local runner</span><Icon name="server" size={15} /></div><strong>macOS · arm64</strong><span>NEON available · 4 MB L2</span></div><button className="sidebar-link" onClick={() => setPage("home")}><Icon name="book" size={15} /> Read the architecture <Icon name="arrow-up-right" size={13} /></button><div className="version">APEX VISUALIZER <span>v0.1.0</span></div></div></aside>
-      <main className="main-content"><header className="topbar"><div className="breadcrumbs"><span>workspace</span><Icon name="chevron-right" size={13} /><b>{page === "home" ? "overview" : navItems.find((item) => item.id === page)?.label.toLowerCase()}</b></div><div className="topbar-actions"><span className="topbar-status"><i /> synced to local schema</span><button className="icon-button" title="Refresh visualization" onClick={handleReset}><Icon name="refresh" size={16} /></button><button className="avatar-button">GG</button></div></header><div className="content-inner">{page === "home" && renderHome()}{page === "execution" && renderExecution()}{page === "simd" && renderSimd()}{page === "threads" && renderThreads()}</div></main>
+      <main className="main-content"><header className="topbar"><div className="breadcrumbs"><span>workspace</span><Icon name="chevron-right" size={13} /><b>{page === "home" ? "overview" : navItems.find((item) => item.id === page)?.label.toLowerCase()}</b></div><div className="topbar-actions"><span className="topbar-status"><i /> synced to local schema</span><button aria-label={theme === "dark" ? "Switch to light mode" : "Switch to dark mode"} className="theme-toggle" onClick={toggleTheme} title={theme === "dark" ? "Switch to light mode" : "Switch to dark mode"}><Icon name={theme === "dark" ? "sun" : "moon"} size={16} /><span>{theme === "dark" ? "Light" : "Dark"}</span></button><button className="icon-button" title="Refresh visualization" onClick={handleReset}><Icon name="refresh" size={16} /></button><button className="avatar-button">GG</button></div></header><div className="content-inner">{page === "home" && renderHome()}{page === "execution" && renderExecution()}{page === "simd" && renderSimd()}{page === "threads" && renderThreads()}</div></main>
     </div>
   );
 };

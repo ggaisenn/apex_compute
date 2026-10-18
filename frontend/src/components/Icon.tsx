@@ -19,6 +19,8 @@ type IconName =
   | "server"
   | "sliders"
   | "spark"
+  | "sun"
+  | "moon"
   | "target"
   | "upload"
   | "users";
@@ -47,6 +49,8 @@ const paths: Record<IconName, string> = {
   server: "M4 4h16v6H4V4Zm0 10h16v6H4v-6ZM8 7h.01M8 17h.01M12 7h5M12 17h5",
   sliders: "M4 6h16M4 12h16M4 18h16M8 4v4M16 10v4M10 16v4",
   spark: "m12 2 1.4 6.6L20 10l-6.6 1.4L12 18l-1.4-6.6L4 10l6.6-1.4L12 2ZM19 16l.6 2.4L22 19l-2.4.6L19 22l-.6-2.4L16 19l2.4-.6L19 16Z",
+  sun: "M12 3v2M12 19v2M3 12h2M19 12h2M5.6 5.6l1.4 1.4M17 17l1.4 1.4M18.4 5.6 17 7M7 17l-1.4 1.4M16.5 12a4.5 4.5 0 1 1-9 0 4.5 4.5 0 0 1 9 0Z",
+  moon: "M20.5 14.5A8.5 8.5 0 0 1 9.5 3.5a8.6 8.6 0 1 0 11 11Z",
   target: "M12 3v3M12 18v3M3 12h3M18 12h3M12 7a5 5 0 1 1 0 10 5 5 0 0 1 0-10ZM12 10v2l2 1",
   upload: "M12 16V4m0 0L7 9m5-5 5 5M5 20h14",
   users: "M16 19v-1a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v1M10 10a4 4 0 1 0 0-8 4 4 0 0 0 0 8Zm6-7a4 4 0 0 1 0 7.7M20 19v-1a4 4 0 0 0-3-3.87",

@@ -1,10 +1,11 @@
 import { useEffect, useRef } from "react";
 import * as THREE from "three";
 import { OrbitControls } from "three/examples/jsm/controls/OrbitControls.js";
-import type { Kernel, MatrixSize, RunMode } from "../types";
+import type { Kernel, MatrixSize, RunMode, Theme } from "../types";
 
 interface ThreeSceneProps {
   size: MatrixSize;
+  theme: Theme;
   kernel: Kernel;
   mode: RunMode;
   step: number;
@@ -129,7 +130,7 @@ const addMatrix = (
   text.height = 72;
   const context = text.getContext("2d");
   if (context) {
-    context.fillStyle = "#9eaaa4";
+    context.fillStyle = group.userData.theme === "light" ? "#42534b" : "#9eaaa4";
     context.font = "600 22px monospace";
     context.fillText(label, 12, 34);
   }
@@ -168,7 +169,7 @@ const addFlowLine = (group: THREE.Group, start: THREE.Vector3, end: THREE.Vector
   group.add(orb);
 };
 
-export const ThreeScene = ({ size, kernel, mode, step, playing, speed, compact = false }: ThreeSceneProps) => {
+export const ThreeScene = ({ size, theme, kernel, mode, step, playing, speed, compact = false }: ThreeSceneProps) => {
   const mountRef = useRef<HTMLDivElement>(null);
   const stateRef = useRef({ step, playing, kernel, mode, speed });
 
@@ -181,8 +182,9 @@ export const ThreeScene = ({ size, kernel, mode, step, playing, speed, compact =
     if (!mount) return undefined;
 
     const scene = new THREE.Scene();
-    scene.background = new THREE.Color(palette.ink);
-    scene.fog = new THREE.Fog(palette.ink, 5.5, 14);
+    const sceneBackground = theme === "light" ? 0xf1f6f3 : palette.ink;
+    scene.background = new THREE.Color(sceneBackground);
+    scene.fog = new THREE.Fog(sceneBackground, 5.5, 14);
     const camera = new THREE.PerspectiveCamera(33, 1, 0.1, 100);
 
     const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
@@ -197,16 +199,17 @@ export const ThreeScene = ({ size, kernel, mode, step, playing, speed, compact =
     controls.minDistance = 2;
     controls.maxDistance = 14;
 
-    scene.add(new THREE.HemisphereLight(0xb7fff4, 0x131a18, 1.5));
-    const keyLight = new THREE.DirectionalLight(0xbefcf1, 3.2);
+    scene.add(new THREE.HemisphereLight(theme === "light" ? 0xffffff : 0xb7fff4, theme === "light" ? 0xd3e0da : 0x131a18, theme === "light" ? 2.2 : 1.5));
+    const keyLight = new THREE.DirectionalLight(theme === "light" ? 0xffffff : 0xbefcf1, theme === "light" ? 2.5 : 3.2);
     keyLight.position.set(3, 5, 4);
     keyLight.castShadow = true;
     scene.add(keyLight);
-    const fillLight = new THREE.PointLight(0x735df5, 5, 8);
+    const fillLight = new THREE.PointLight(0x735df5, theme === "light" ? 2.2 : 5, 8);
     fillLight.position.set(-2, 2, 1);
     scene.add(fillLight);
 
     const stage = new THREE.Group();
+    stage.userData.theme = theme;
     stage.rotation.y = -0.08;
     scene.add(stage);
     const layout = getMatrixLayout(size, compact);
@@ -324,7 +327,7 @@ export const ThreeScene = ({ size, kernel, mode, step, playing, speed, compact =
         }
       });
     };
-  }, [compact, size]);
+  }, [compact, size, theme]);
 
   return <div aria-label="3D matrix execution visualizer" className="three-stage" ref={mountRef} />;
 };

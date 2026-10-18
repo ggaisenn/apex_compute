@@ -1,4 +1,5 @@
 export type Page = "home" | "execution" | "simd" | "threads";
+export type Theme = "dark" | "light";
 export type Kernel = "scalar" | "neon-4x4" | "avx512";
 export type RunMode = "engine" | "naive";
 export type MatrixSize = 64 | 128 | 256 | 512;
