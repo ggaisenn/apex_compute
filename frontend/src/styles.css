@@ -130,6 +130,7 @@ nav { display: grid; gap: 5px; }
 .legend-cyan { background: var(--cyan); box-shadow: 0 0 7px var(--cyan); }
 .legend-violet { background: var(--violet); box-shadow: 0 0 7px var(--violet); }
 .legend-amber { background: var(--amber); box-shadow: 0 0 7px var(--amber); }
+.legend-red { background: var(--red); box-shadow: 0 0 7px var(--red); }
 .command-panel { margin-top: 22px; padding: 18px; }
 .command-row { display: flex; gap: 10px; margin: 17px 0 15px; }
 .terminal-command { min-width: 0; flex: 1; display: flex; align-items: center; gap: 10px; border: 1px solid var(--line); border-radius: 5px; padding: 0 12px; color: var(--muted); background: #0b100e; overflow: hidden; }
@@ -213,6 +214,8 @@ select { appearance: none; border: 1px solid var(--line); border-radius: 4px; mi
 .timeline-track { height: 3px; margin: 14px 0 10px; border-radius: 3px; background: rgba(255,255,255,.08); overflow: hidden; }
 .timeline-track span { display: block; height: 100%; border-radius: inherit; background: var(--cyan); box-shadow: 0 0 12px rgba(85,223,205,.8); transition: width .3s ease; }
 .timeline-steps { display: flex; justify-content: space-between; color: var(--soft); font-size: 7px; }
+.timeline-note { display: flex; align-items: center; gap: 7px; margin-top: 12px; color: var(--red); font-family: var(--mono); font-size: 7px; letter-spacing: .04em; text-transform: uppercase; }
+.timeline-note i { display: block; width: 5px; height: 5px; border-radius: 50%; background: var(--red); box-shadow: 0 0 9px var(--red); }
 .metrics-strip { display: grid; grid-template-columns: repeat(4, 1fr); gap: 20px; padding: 19px; margin-top: 12px; }
 .metrics-strip .metric-value { font-size: 22px; }
 .kernel-tabs { border: 1px solid var(--line); border-radius: 5px; padding: 3px; }

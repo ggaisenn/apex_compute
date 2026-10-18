@@ -1,6 +1,7 @@
 import { useEffect, useRef } from "react";
 import * as THREE from "three";
 import { OrbitControls } from "three/examples/jsm/controls/OrbitControls.js";
+import { getNaiveAccess } from "../executionTrace";
 import type { Kernel, MatrixSize, RunMode, Theme } from "../types";
 
 interface ThreeSceneProps {
@@ -47,6 +48,11 @@ interface MatrixBounds {
   centerZ: number;
 }
 
+interface NaivePulse {
+  mesh: THREE.Mesh;
+  row: number;
+}
+
 const getMatrixLayout = (dimension: MatrixSize, compact: boolean): MatrixLayout => {
   const visualGrid: Record<MatrixSize, { columns: number; rows: number }> = {
     64: { columns: compact ? 4 : 5, rows: compact ? 3 : 4 },
@@ -75,9 +81,17 @@ const getMatrixLayout = (dimension: MatrixSize, compact: boolean): MatrixLayout 
   };
 };
 
+const getCellPosition = (origin: THREE.Vector3, layout: MatrixLayout, row: number, column: number) =>
+  new THREE.Vector3(
+    origin.x + column * (layout.cellSize + layout.gap),
+    origin.y + (layout.rows - row) * layout.rowLift,
+    origin.z + row * (layout.cellSize + layout.gap),
+  );
+
 const addMatrix = (
   group: THREE.Group,
   label: string,
+  matrixName: "A" | "B" | "C",
   origin: THREE.Vector3,
   color: number,
   tileOffset: number,
@@ -102,12 +116,11 @@ const addMatrix = (
       mesh.userData.tileIndex = tileIndex;
       mesh.userData.tileOffset = tileOffset;
       mesh.userData.matrixColor = color;
+      mesh.userData.matrixName = matrixName;
+      mesh.userData.visualRow = row;
+      mesh.userData.visualColumn = column;
       mesh.userData.baseOpacity = 0.76;
-      mesh.position.set(
-        origin.x + column * (cellSize + gap),
-        origin.y + (rows - row) * rowLift,
-        origin.z + row * (cellSize + gap),
-      );
+      mesh.position.copy(getCellPosition(origin, layout, row, column));
       mesh.castShadow = true;
       group.add(mesh);
     }
@@ -159,6 +172,7 @@ const addFlowLine = (group: THREE.Group, start: THREE.Vector3, end: THREE.Vector
     new THREE.BufferGeometry().setFromPoints(new THREE.CatmullRomCurve3([start, control, end]).getPoints(18)),
     new THREE.LineBasicMaterial({ color, transparent: true, opacity: 0.7 }),
   );
+  line.userData.executionFlow = true;
   group.add(line);
   const orb = new THREE.Mesh(
     new THREE.SphereGeometry(0.065, 12, 12),
@@ -166,7 +180,36 @@ const addFlowLine = (group: THREE.Group, start: THREE.Vector3, end: THREE.Vector
   );
   orb.userData.flowStart = start.clone();
   orb.userData.flowEnd = end.clone();
+  orb.userData.executionFlow = true;
   group.add(orb);
+};
+
+const addNaiveCachePulses = (
+  group: THREE.Group,
+  origin: THREE.Vector3,
+  layout: MatrixLayout,
+): NaivePulse[] => {
+  const pulseGeometry = new THREE.SphereGeometry(layout.cellSize * 0.3, 12, 12);
+  const pulses: NaivePulse[] = [];
+
+  for (let row = 0; row < layout.rows; row += 1) {
+    const pulse = new THREE.Mesh(
+      pulseGeometry,
+      new THREE.MeshBasicMaterial({
+        color: palette.red,
+        transparent: true,
+        opacity: 0.08,
+        depthWrite: false,
+      }),
+    );
+    pulse.userData.naiveCachePulse = true;
+    pulse.position.copy(getCellPosition(origin, layout, row, 0));
+    pulse.position.y += layout.cellHeight * 0.72;
+    group.add(pulse);
+    pulses.push({ mesh: pulse, row });
+  }
+
+  return pulses;
 };
 
 export const ThreeScene = ({ size, theme, kernel, mode, step, playing, speed, compact = false }: ThreeSceneProps) => {
@@ -218,10 +261,14 @@ export const ThreeScene = ({ size, theme, kernel, mode, step, playing, speed, co
     const rowLeft = -rowWidth / 2;
     const matrixOriginZ = -layout.outerDepth / 2 + layout.outerPad / 2;
     const matrixOriginOffsetX = layout.outerPad / 2;
+    const aOrigin = new THREE.Vector3(rowLeft + matrixOriginOffsetX, 0, matrixOriginZ);
+    const bOrigin = new THREE.Vector3(rowLeft + layout.outerWidth + rowGap + matrixOriginOffsetX, 0, matrixOriginZ);
+    const cOrigin = new THREE.Vector3(-layout.outerWidth / 2 + matrixOriginOffsetX, compact ? -0.52 : -0.68, matrixOriginZ);
     const a = addMatrix(
       stage,
       `A · ${size}×${size}`,
-      new THREE.Vector3(rowLeft + matrixOriginOffsetX, 0, matrixOriginZ),
+      "A",
+      aOrigin,
       palette.cyan,
       0,
       layout,
@@ -229,7 +276,8 @@ export const ThreeScene = ({ size, theme, kernel, mode, step, playing, speed, co
     const b = addMatrix(
       stage,
       `B · ${size}×${size}`,
-      new THREE.Vector3(rowLeft + layout.outerWidth + rowGap + matrixOriginOffsetX, 0, matrixOriginZ),
+      "B",
+      bOrigin,
       palette.violet,
       4,
       layout,
@@ -237,11 +285,13 @@ export const ThreeScene = ({ size, theme, kernel, mode, step, playing, speed, co
     const c = addMatrix(
       stage,
       `C · ${size}×${size}`,
-      new THREE.Vector3(-layout.outerWidth / 2 + matrixOriginOffsetX, compact ? -0.52 : -0.68, matrixOriginZ),
+      "C",
+      cOrigin,
       palette.amber,
       8,
       layout,
     );
+    const naivePulses = addNaiveCachePulses(stage, bOrigin, layout);
     addFlowLine(stage, new THREE.Vector3(a.right + 0.04, a.centerY, a.centerZ), new THREE.Vector3(c.left + 0.16, c.top, c.centerZ), palette.cyan);
     addFlowLine(stage, new THREE.Vector3(b.left - 0.04, b.centerY, b.centerZ), new THREE.Vector3(c.right - 0.16, c.top, c.centerZ), palette.violet);
 
@@ -291,21 +341,65 @@ export const ThreeScene = ({ size, theme, kernel, mode, step, playing, speed, co
       }
       const activeColor = current.mode === "naive" ? palette.red : current.kernel === "avx512" ? palette.amber : palette.cyan;
       const pulseRate = 0.35 + (current.speed / 100) * 1.2;
+      const naiveAccess = getNaiveAccess(current.step, layout.rows, layout.columns);
+      const naivePulsePhase = current.playing
+        ? (elapsed * pulseRate + current.step / 12) % 1
+        : naiveAccess.innerRow / layout.rows;
       stage.children.forEach((object) => {
+        if (object.userData.executionFlow && !(object instanceof THREE.Mesh)) {
+          object.visible = current.mode !== "naive";
+          return;
+        }
         if (object instanceof THREE.Mesh && object.userData.flowStart && object.userData.flowEnd) {
+          object.visible = current.mode !== "naive";
           const pulse = current.playing ? (elapsed * pulseRate + current.step * 0.08) % 1 : (current.step % 12) / 12;
           object.position.lerpVectors(object.userData.flowStart, object.userData.flowEnd, pulse);
           const material = object.material as THREE.MeshBasicMaterial;
           material.color.set(activeColor);
         } else if (object instanceof THREE.Mesh && object.userData.tileIndex !== undefined) {
           const material = object.material as THREE.MeshStandardMaterial;
-          const activeTile = (current.step + Number(object.userData.tileOffset ?? 0)) % 12;
-          const isActive = Number(object.userData.tileIndex) === activeTile;
-          material.color.set(isActive ? activeColor : Number(object.userData.matrixColor));
-          material.emissive.set(isActive ? activeColor : Number(object.userData.matrixColor));
-          material.emissiveIntensity = isActive ? (current.playing ? 0.95 : 0.65) : 0.12;
-          material.opacity = isActive ? 1 : Number(object.userData.baseOpacity);
+          if (current.mode === "naive") {
+            const matrixName = object.userData.matrixName as "A" | "B" | "C";
+            const row = Number(object.userData.visualRow);
+            const column = Number(object.userData.visualColumn);
+            const isActive = matrixName === "A"
+              ? row === naiveAccess.outputRow && column === naiveAccess.innerColumn
+              : matrixName === "B"
+                ? row === naiveAccess.innerRow && column === naiveAccess.outputColumn
+                : row === naiveAccess.outputRow && column === naiveAccess.outputColumn;
+            const isStridedBAccess = matrixName === "B" && column === naiveAccess.outputColumn;
+            const matrixColor = Number(object.userData.matrixColor);
+            const cellColor = isActive ? (matrixName === "B" ? palette.red : activeColor) : matrixColor;
+            material.color.set(cellColor);
+            material.emissive.set(cellColor);
+            material.emissiveIntensity = isActive ? (current.playing ? 0.95 : 0.65) : isStridedBAccess ? 0.24 : 0.12;
+            material.opacity = isActive ? 1 : isStridedBAccess ? 0.58 : Number(object.userData.baseOpacity);
+          } else {
+            const activeTile = (current.step + Number(object.userData.tileOffset ?? 0)) % 12;
+            const isActive = Number(object.userData.tileIndex) === activeTile;
+            material.color.set(isActive ? activeColor : Number(object.userData.matrixColor));
+            material.emissive.set(isActive ? activeColor : Number(object.userData.matrixColor));
+            material.emissiveIntensity = isActive ? (current.playing ? 0.95 : 0.65) : 0.12;
+            material.opacity = isActive ? 1 : Number(object.userData.baseOpacity);
+          }
         }
+      });
+      naivePulses.forEach(({ mesh, row }) => {
+        const material = mesh.material as THREE.MeshBasicMaterial;
+        const pulsePosition = getCellPosition(bOrigin, layout, row, naiveAccess.outputColumn);
+        mesh.position.copy(pulsePosition);
+        mesh.position.y += layout.cellHeight * 0.72;
+        if (current.mode !== "naive") {
+          material.opacity = 0;
+          return;
+        }
+
+        const phase = row / layout.rows;
+        const distance = Math.min(Math.abs(naivePulsePhase - phase), 1 - Math.abs(naivePulsePhase - phase));
+        const glow = current.playing ? Math.max(0, 1 - distance * layout.rows * 1.7) : row === naiveAccess.innerRow ? 1 : 0;
+        material.opacity = current.playing ? 0.08 + glow * 0.92 : glow;
+        const scale = 0.65 + glow * 0.8;
+        mesh.scale.setScalar(scale);
       });
       controls.update();
       renderer.render(scene, camera);

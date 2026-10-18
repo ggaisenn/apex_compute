@@ -3,6 +3,7 @@ import type { ChangeEvent, ReactNode } from "react";
 import { getSnapshot, formatNumber, sizes, snapshotFromImportedLog } from "./data";
 import Icon from "./components/Icon";
 import { ThreeScene } from "./components/ThreeScene";
+import { getExecutionPhase } from "./executionTrace";
 import type { BenchmarkSnapshot, Kernel, MatrixSize, Page, RunMode, Theme } from "./types";
 
 const navItems: Array<{ id: Page; label: string; detail: string; icon: "gauge" | "layers" | "cpu" | "users" }> = [
@@ -160,6 +161,15 @@ const App = () => {
 
   const command = useMemo(() => commandFor(size, kernel, mode), [kernel, mode, size]);
   const activeTile = (step % 12) + 1;
+  const executionPhase = getExecutionPhase(step);
+  const naiveOperation = executionPhase === "A load"
+    ? "row-local A load"
+    : executionPhase === "B load"
+      ? "strided B load · cache miss"
+      : executionPhase === "FMA"
+        ? "scalar accumulation"
+        : "C store";
+  const engineOperation = executionPhase === "FMA" ? "fused multiply-add" : executionPhase === "C store" ? "accumulator store" : "packed panel load";
 
   const renderHome = () => (
     <>
@@ -183,7 +193,7 @@ const App = () => {
         <div className="hero-visual panel panel-glow">
           <div className="visual-topline"><span>LIVE ALLOCATION / TILE {String(activeTile).padStart(2, "0")}</span><span className="visual-rec"><i /> 60 FPS</span></div>
           <ThreeScene compact size={size} theme={theme} kernel={kernel} mode={mode} playing={playing} speed={speed} step={step} />
-          <div className="visual-legend"><span><i className="legend-cyan" /> A panel</span><span><i className="legend-violet" /> B panel</span><span><i className="legend-amber" /> C accumulator</span></div>
+          <div className="visual-legend"><span><i className="legend-cyan" /> A panel</span><span><i className="legend-violet" /> B panel</span><span><i className="legend-amber" /> C accumulator</span>{mode === "naive" && <span><i className="legend-red" /> uncached B line</span>}</div>
         </div>
       </section>
 
@@ -226,8 +236,8 @@ const App = () => {
         <button className="button button-primary" onClick={handleNextTile}><Icon name="chevron-right" size={15} /> Next tile</button>
       </PageTitle>
       <section className="execution-layout">
-        <div className="panel execution-visual"><div className="visual-topline"><span>GEMM PIPELINE / {size}³</span><StatusPill tone={mode === "naive" ? "amber" : "green"}>{mode} path</StatusPill></div><ThreeScene size={size} theme={theme} speed={speed} kernel={kernel} mode={mode} playing={playing} step={step} /><div className="timeline"><div className="timeline-label"><span>tile {String(activeTile).padStart(2, "0")} / 12</span><span>{Math.round((activeTile / 12) * 100)}%</span></div><div className="timeline-track"><span style={{ width: `${(activeTile / 12) * 100}%` }} /></div><div className="timeline-steps"><span>A load</span><span>B load</span><span>FMA</span><span>C store</span></div></div></div>
-        <aside className="execution-aside"><div className="panel control-panel"><PanelHeading label="Playback controls" /><label className="range-label"><span>animation speed</span><b>{speed}%</b><input max="100" min="10" onChange={(event) => setSpeed(Number(event.target.value))} type="range" value={speed} /></label><div className="select-stack"><span>execution path</span><div className="segmented"><button className={mode === "naive" ? "is-active" : ""} onClick={() => setMode("naive")}>naive</button><button className={mode === "engine" ? "is-active" : ""} onClick={() => setMode("engine")}>engine</button></div></div><div className="select-stack"><span>matrix dimension</span><div className="size-pills">{sizes.map((item) => <button className={size === item ? "is-active" : ""} key={item} onClick={() => updateSize(item)}>{item}</button>)}</div></div><button className="reset-button" onClick={handleReset}><Icon name="refresh" size={14} /> Reset animation</button></div><div className="panel explanation-panel"><div className="explanation-icon"><Icon name="spark" size={18} /></div><span className="eyebrow">WHAT IS HAPPENING</span><h3>{mode === "naive" ? "The memory walk is scattered." : "The working set stays hot."}</h3><p>{mode === "naive" ? "A naive traversal jumps across rows. The visualized red pulses represent cache lines fetched without reuse." : `Tile ${activeTile} packs A and B panels into contiguous scratch buffers before the micro-kernel accumulates into C.`}</p><div className="explanation-detail"><span>current operation</span><strong>{mode === "naive" ? "cache miss / reload" : activeTile % 3 === 0 ? "fused multiply-add" : "packed panel load"}</strong></div></div></aside>
+        <div className="panel execution-visual"><div className="visual-topline"><span>GEMM PIPELINE / {size}³</span><StatusPill tone={mode === "naive" ? "amber" : "green"}>{mode} path</StatusPill></div><ThreeScene size={size} theme={theme} speed={speed} kernel={kernel} mode={mode} playing={playing} step={step} /><div className="timeline"><div className="timeline-label"><span>tile {String(activeTile).padStart(2, "0")} / 12</span><span>{Math.round((activeTile / 12) * 100)}%</span></div><div className="timeline-track"><span style={{ width: `${(activeTile / 12) * 100}%` }} /></div><div className="timeline-steps"><span>A load</span><span>{mode === "naive" ? "B stride" : "B load"}</span><span>FMA</span><span>C store</span></div>{mode === "naive" && <div className="timeline-note"><i /> red pulse · cache line fetched without reuse</div>}</div></div>
+        <aside className="execution-aside"><div className="panel control-panel"><PanelHeading label="Playback controls" /><label className="range-label"><span>animation speed</span><b>{speed}%</b><input max="100" min="10" onChange={(event) => setSpeed(Number(event.target.value))} type="range" value={speed} /></label><div className="select-stack"><span>execution path</span><div className="segmented"><button className={mode === "naive" ? "is-active" : ""} onClick={() => setMode("naive")}>naive</button><button className={mode === "engine" ? "is-active" : ""} onClick={() => setMode("engine")}>engine</button></div></div><div className="select-stack"><span>matrix dimension</span><div className="size-pills">{sizes.map((item) => <button className={size === item ? "is-active" : ""} key={item} onClick={() => updateSize(item)}>{item}</button>)}</div></div><button className="reset-button" onClick={handleReset}><Icon name="refresh" size={14} /> Reset animation</button></div><div className="panel explanation-panel"><div className="explanation-icon"><Icon name="spark" size={18} /></div><span className="eyebrow">WHAT IS HAPPENING</span><h3>{mode === "naive" ? "The memory walk is scattered." : "The working set stays hot."}</h3><p>{mode === "naive" ? "A naive traversal jumps across rows. The visualized red pulses represent cache lines fetched without reuse." : `Tile ${activeTile} packs A and B panels into contiguous scratch buffers before the micro-kernel accumulates into C.`}</p><div className="explanation-detail"><span>current operation</span><strong>{mode === "naive" ? naiveOperation : engineOperation}</strong></div></div></aside>
       </section>
       <section className="metrics-strip panel"><Metric label="L1 hit ratio" value={formatNumber(snapshot.l1Hit)} unit="%" accent="cyan" /><Metric label="L2 hit ratio" value={formatNumber(snapshot.l2Hit)} unit="%" accent="violet" /><Metric label="memory bandwidth" value={formatNumber(snapshot.bandwidth)} unit=" GB/s" accent="amber" /><Metric label="active accumulator" value={`C${activeTile}`} accent="green" /></section>
     </>
