@@ -1,5 +1,5 @@
 # APEX-COMPUTE
-
+![Hero](img/1.png)
 A runtime engine built to accelerate dense matrix multiplication (GEMM) on commodity CPUs via cache tiling, panel packing, and explicit SIMD vectorization (ARM NEON & AVX-512).
 
 ## Why this project
@@ -7,7 +7,7 @@ A runtime engine built to accelerate dense matrix multiplication (GEMM) on commo
 Transformer inference repeatedly performs dense matrix multiplication (GEMM) in attention and feed-forward layers. Its practical throughput depends not only on the arithmetic, but also on how data is aligned, reused in cache, and scheduled across the CPU's vector units and cores.
 
 APEX-COMPUTE makes that CPU systems layer visible and measurable. It pairs a portable scalar reference with cache-aware tiling, packed panels, explicit SIMD kernels, and parallel execution, then checks optimized results against a high-precision reference and measures them against a naive baseline. The project focuses on the numerical engine and its evidence.
-
+![Hero](img/2.png)
 ## Architecture and technology
 
 The design separates machine-level arithmetic from planning, public interfaces, verification, and user-facing tools. Each layer has a defined responsibility; the optional companion sits above the normal CLI workflow and cannot bypass its validated command path.
