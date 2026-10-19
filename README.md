@@ -1,6 +1,6 @@
 # APEX-COMPUTE
 ![Hero](img/1.png)
-A runtime engine built to accelerate dense matrix multiplication (GEMM) on commodity CPUs via cache tiling, panel packing, and explicit SIMD vectorization (ARM NEON & AVX-512).
+A runtime engine built to benchmark dense matrix multiplication (GEMM) on commodity CPUs via cache tiling, panel packing, and explicit SIMD vectorization (ARM NEON & AVX-512).
 
 ## Why this project
 
